@@ -90,8 +90,8 @@ func (c *authController) Login(ctx *fiber.Ctx) error {
 			return ctx.Status(http.StatusInternalServerError).JSON(pkg.NewResponse(http.StatusInternalServerError, pkg.ErrServer.Error(), nil, nil))
 		}
 
-		accessTokenExp := config.GetUint("jwt.accessToken.expMinute")
-		refreshTokenExp := config.GetUint("jwt.refreshToken.expDay")
+		accessTokenExp := config.GetUint("JWT_ACCESS_EXP_MINUTE")
+		refreshTokenExp := config.GetUint("JWT_REFRESH_EXP_DAY")
 
 		ctx.Cookie(&fiber.Cookie{
 			Name:     "access_token",
@@ -136,8 +136,8 @@ func (c *authController) RefreshToken(ctx *fiber.Ctx) error {
 			return ctx.Status(http.StatusUnauthorized).JSON(pkg.NewResponse(http.StatusUnauthorized, pkg.ErrNotAuthorized.Error(), nil, nil))
 		}
 
-		accessTokenExp := config.GetUint("jwt.accessToken.expMinute")
-		refreshTokenExp := config.GetUint("jwt.refreshToken.expDay")
+		accessTokenExp := config.GetUint("JWT_ACCESS_EXP_MINUTE")
+		refreshTokenExp := config.GetUint("JWT_REFRESH_EXP_DAY")
 
 		ctx.Cookie(&fiber.Cookie{
 			Name:     "access_token",

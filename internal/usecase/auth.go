@@ -134,7 +134,7 @@ func (u *authUsecase) Login(props *entity.LoginRequest) (resp pkg.Response) {
 	refreshTokenData := entity.RefreshToken{
 		UserId:    existingUser.ID,
 		Token:     pkg.Hash(refreshToken),
-		ExpiredAt: time.Now().Add(time.Duration(config.GetUint("jwt.refreshToken.expDay")) * 24 * time.Hour),
+		ExpiredAt: time.Now().Add(time.Duration(config.GetUint("JWT_REFRESH_EXP_DAY")) * 24 * time.Hour),
 	}
 
 	_, err = u.authRepo.InsertRefreshToken(refreshTokenData, tx)
@@ -213,7 +213,7 @@ func (u *authUsecase) RefreshToken(refreshToken string) (resp pkg.Response) {
 	refreshTokenData := entity.RefreshToken{
 		UserId:    existingUser.ID,
 		Token:     pkg.Hash(newRefreshToken),
-		ExpiredAt: time.Now().Add(time.Duration(config.GetUint("jwt.refreshToken.expDay")) * 24 * time.Hour),
+		ExpiredAt: time.Now().Add(time.Duration(config.GetUint("JWT_REFRESH_EXP_DAY")) * 24 * time.Hour),
 	}
 
 	_, err = u.authRepo.InsertRefreshToken(refreshTokenData, tx)

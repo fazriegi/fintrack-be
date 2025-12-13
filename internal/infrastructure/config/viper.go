@@ -2,28 +2,30 @@ package config
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/spf13/viper"
 )
 
 var viperInstance *viper.Viper
 
-func NewViper() *viper.Viper {
+func NewViper() {
 	config := viper.New()
 
-	config.SetConfigName("config")
-	config.SetConfigType("json")
-	config.AddConfigPath("../../")
-	config.AddConfigPath("./")
-	err := config.ReadInConfig()
+	config.SetConfigFile(".env")
+	config.SetConfigType("env")
 
+	config.SetEnvPrefix("APP")
+	config.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	config.AutomaticEnv()
+
+	err := config.ReadInConfig()
 	if err != nil {
 		panic(fmt.Errorf("fatal error config file: %w", err))
 	}
 
 	viperInstance = config
-
-	return config
+	fmt.Println("JWT_SECRET:", viperInstance.GetString("JWT_SECRET"))
 }
 
 func GetString(key string) string {

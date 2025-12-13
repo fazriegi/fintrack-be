@@ -4,18 +4,18 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/fazriegi/fintrack-be/internal/infrastructure/config"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
-	"github.com/spf13/viper"
 )
 
-func NewMysql(viper *viper.Viper) {
-	host := viper.GetString("db.host")
-	username := viper.GetString("db.username")
-	password := viper.GetString("db.password")
-	name := viper.GetString("db.name")
-	port := viper.GetInt32("db.port")
-	DRIVER = viper.GetString("db.driver")
+func NewMysql() {
+	host := config.GetString("DB_HOST")
+	username := config.GetString("DB_USERNAME")
+	password := config.GetString("DB_PASSWORD")
+	name := config.GetString("DB_NAME")
+	port := config.GetInt("DB_PORT")
+	DRIVER = config.GetString("DB_DRIVER")
 
 	dbSource := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?parseTime=true&charset=utf8mb4&loc=Local",
 		username,

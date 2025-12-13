@@ -36,7 +36,7 @@ func deriveKey(keyStr string) []byte {
 
 func Encrypt(keyStr, value string) (string, error) {
 	if keyStr == "" {
-		keyStr = config.GetString("secret.encryptionKey")
+		keyStr = config.GetString("ENCRYPTION_KEY")
 		if keyStr == "" {
 			return "", fmt.Errorf("encryption key is not set in config")
 		}
@@ -70,7 +70,7 @@ func Encrypt(keyStr, value string) (string, error) {
 
 func Decrypt(keyStr, encodedCipher string) (string, error) {
 	if keyStr == "" {
-		keyStr = config.GetString("secret.encryptionKey")
+		keyStr = config.GetString("ENCRYPTION_KEY")
 		if keyStr == "" {
 			return "", fmt.Errorf("encryption key is not set in config")
 		}

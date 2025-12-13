@@ -17,18 +17,18 @@ import (
 )
 
 func main() {
-	viperConfig := config.NewViper()
-	database.NewMysql(viperConfig)
-	jwt := pkg.InitJWT(config.GetString("jwt.key"), config.GetUint("jwt.accessToken.expMinute"), config.GetUint("jwt.refreshToken.expDay"))
-	file := logger.New(viperConfig)
+	config.NewViper()
+	database.NewMysql()
+	jwt := pkg.InitJWT(config.GetString("JWT_SECRET"), config.GetUint("JWT_ACCESS_EXP_MINUTE"), config.GetUint("JWT_REFRESH_EXP_DAY"))
+	file := logger.New()
 	defer file.Close()
 
 	app := fiber.New()
 
-	origins := config.GetString("cors.origins")
+	origins := config.GetString("CORS_ORIGINS")
 
 	maxAge := 12 * time.Hour
-	if config.GetString("env") != "production" {
+	if config.GetString("ENV") != "production" {
 		maxAge = 10 * time.Minute
 	}
 
@@ -41,7 +41,7 @@ func main() {
 	}))
 
 	app.Use(middleware.LogMiddleware())
-	port := config.GetInt("web.port")
+	port := config.GetInt("PORT")
 	router.NewRoute(app, jwt)
 
 	log.Fatal(app.Listen(fmt.Sprintf(":%d", port)))

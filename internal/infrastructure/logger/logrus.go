@@ -5,15 +5,15 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/fazriegi/fintrack-be/internal/infrastructure/config"
 	"github.com/sirupsen/logrus"
-	"github.com/spf13/viper"
 )
 
 var LOGGER *logrus.Logger
 
-func New(viper *viper.Viper) *os.File {
-	outputFilePath := viper.GetString("log.outputFile")
-	logLevel := viper.GetInt32("log.level")
+func New() *os.File {
+	outputFilePath := config.GetString("LOG_OUTPUT_FILE")
+	logLevel := config.GetInt("LOG_LEVEL")
 
 	dir := filepath.Dir(outputFilePath)
 	// check if the file output exists
