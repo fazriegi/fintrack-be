@@ -1,9 +1,11 @@
 package controller
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/fazriegi/fintrack-be/internal/entity"
+	"github.com/fazriegi/fintrack-be/internal/infrastructure/config"
 	"github.com/fazriegi/fintrack-be/internal/infrastructure/logger"
 	"github.com/fazriegi/fintrack-be/internal/pkg"
 	"github.com/fazriegi/fintrack-be/internal/usecase"
@@ -78,6 +80,40 @@ func (c *authController) Login(ctx *fiber.Ctx) error {
 	}
 
 	response = c.usecase.Login(&reqBody)
+
+	if response.Data != nil {
+		data, ok := response.Data.(map[string]any)
+		if !ok {
+			c.logger.Errorf("error convert data")
+			return ctx.Status(http.StatusInternalServerError).JSON(pkg.NewResponse(http.StatusInternalServerError, pkg.ErrServer.Error(), nil, nil))
+		}
+
+		accessTokenExp := config.GetUint("jwt.accessToken.expMinute")
+		refreshTokenExp := config.GetUint("jwt.refreshToken.expDay")
+
+		ctx.Cookie(&fiber.Cookie{
+			Name:     "access_token",
+			Value:    fmt.Sprint(data["access_token"]),
+			HTTPOnly: true,
+			Secure:   true,
+			SameSite: "Lax",
+			MaxAge:   int(accessTokenExp) * 60, // minute
+		})
+
+		ctx.Cookie(&fiber.Cookie{
+			Name:     "refresh_token",
+			Value:    fmt.Sprint(data["refresh_token"]),
+			HTTPOnly: true,
+			Secure:   true,
+			SameSite: "Lax",
+			MaxAge:   int(refreshTokenExp) * 24 * 60 * 60, // day
+		})
+
+		delete(data, "access_token")
+		delete(data, "refresh_token")
+
+		response.Data = data
+	}
 
 	return ctx.Status(response.Status.Code).JSON(response)
 }

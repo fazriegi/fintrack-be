@@ -3,7 +3,6 @@ package middleware
 import (
 	"encoding/json"
 	"net/http"
-	"strings"
 
 	"github.com/fazriegi/fintrack-be/internal/entity"
 	"github.com/fazriegi/fintrack-be/internal/pkg"
@@ -13,18 +12,10 @@ import (
 func Authentication(jwt *pkg.JWT) func(ctx *fiber.Ctx) error {
 	return func(ctx *fiber.Ctx) error {
 		var response = pkg.Response{}
-		header := ctx.Get("Authorization")
-		isHasBearer := strings.HasPrefix(header, "Bearer")
 
-		if !isHasBearer {
-			response = pkg.NewResponse(http.StatusUnauthorized, "sign in to proceed", nil, nil)
+		tokenString := ctx.Cookies("access_token")
 
-			return ctx.Status(response.Code).JSON(response)
-		}
-
-		tokenString := strings.Split(header, " ")[1]
-
-		verifiedToken, err := jwt.VerifyJWTTOken(tokenString)
+		verifiedToken, err := jwt.VerifyToken(tokenString, "access")
 		if err != nil {
 			response = pkg.NewResponse(http.StatusUnauthorized, err.Error(), nil, nil)
 			return ctx.Status(response.Code).JSON(response)

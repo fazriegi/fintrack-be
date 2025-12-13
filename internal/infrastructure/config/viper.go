@@ -33,3 +33,7 @@ func GetString(key string) string {
 func GetInt(key string) int {
 	return viperInstance.GetInt(key)
 }
+
+func GetUint(key string) uint {
+	return viperInstance.GetUint(key)
+}

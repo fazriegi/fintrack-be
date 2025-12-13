@@ -9,3 +9,14 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 CREATE INDEX idx_users_username ON users(username);
+
+CREATE TABLE IF NOT EXISTS refresh_tokens (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    token VARCHAR(255) NOT NULL,
+    expired_at TIMESTAMP NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+CREATE INDEX idx_refresh_tokens_user_id ON refresh_tokens(user_id);

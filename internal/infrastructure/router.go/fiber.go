@@ -12,7 +12,8 @@ import (
 
 func NewRoute(app *fiber.App, jwt *pkg.JWT) {
 	userRepo := repository.NewUserRepository()
-	authUC := usecase.NewAuthUsecase(userRepo, jwt)
+	authRepo := repository.NewAuthRepository()
+	authUC := usecase.NewAuthUsecase(userRepo, authRepo, jwt)
 	authController := controller.NewAuthController(authUC)
 
 	v1 := app.Group("/api/v1")
