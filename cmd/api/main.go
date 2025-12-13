@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/fazriegi/fintrack-be/internal/infrastructure/config"
 	"github.com/fazriegi/fintrack-be/internal/infrastructure/database"
@@ -26,11 +27,17 @@ func main() {
 
 	origins := config.GetString("cors.origins")
 
+	maxAge := 12 * time.Hour
+	if config.GetString("env") != "production" {
+		maxAge = 10 * time.Minute
+	}
+
 	app.Use(cors.New(cors.Config{
 		AllowOrigins:     origins,
 		AllowMethods:     "GET,POST,PUT,DELETE,OPTIONS",
 		AllowHeaders:     "Origin, Content-Type, Accept, Authorization",
 		AllowCredentials: true,
+		MaxAge:           int(maxAge),
 	}))
 
 	app.Use(middleware.LogMiddleware())

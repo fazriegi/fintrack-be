@@ -1,5 +1,6 @@
 {
   "appName": "app name",
+  "env": "dev",
   "web": {
     "port": 8080
   },
