@@ -13,6 +13,7 @@ type AuthRepository interface {
 	InsertRefreshToken(data entity.RefreshToken, db *sqlx.Tx) (result uint, err error)
 	GetRefreshToken(token string, userId uint, db *sqlx.DB) (result entity.RefreshToken, err error)
 	DeleteRefreshTokenById(id uint, tx *sqlx.Tx) error
+	DeleteRefreshTokenByToken(token string, tx *sqlx.Tx) error
 }
 
 type authRepo struct {
@@ -76,6 +77,23 @@ func (r *authRepo) DeleteRefreshTokenById(id uint, tx *sqlx.Tx) error {
 	dialect := pkg.GetDialect()
 
 	dataset := dialect.Delete("refresh_tokens").Where(goqu.I("id").Eq(id))
+	sql, val, err := dataset.ToSQL()
+	if err != nil {
+		return fmt.Errorf("failed to build SQL query: %w", err)
+	}
+
+	_, err = tx.Exec(sql, val...)
+	if err != nil {
+		return fmt.Errorf("failed to execute insert: %w", err)
+	}
+
+	return nil
+}
+
+func (r *authRepo) DeleteRefreshTokenByToken(token string, tx *sqlx.Tx) error {
+	dialect := pkg.GetDialect()
+
+	dataset := dialect.Delete("refresh_tokens").Where(goqu.I("token").Eq(token))
 	sql, val, err := dataset.ToSQL()
 	if err != nil {
 		return fmt.Errorf("failed to build SQL query: %w", err)

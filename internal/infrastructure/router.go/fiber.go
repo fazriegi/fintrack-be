@@ -20,6 +20,7 @@ func NewRoute(app *fiber.App, jwt *pkg.JWT) {
 		v1.Post("/register", authController.Register)
 		v1.Post("/login", authController.Login)
 		v1.Get("/check-token", middleware.Authentication(jwt), authController.CheckToken)
-		v1.Get("/refresh-token", authController.RefreshToken)
+		v1.Post("/refresh-token", authController.RefreshToken)
+		v1.Post("/logout", authController.Logout)
 	}
 }

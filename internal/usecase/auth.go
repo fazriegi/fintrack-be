@@ -19,6 +19,7 @@ type AuthUsecase interface {
 	Register(props *entity.RegisterRequest) (resp pkg.Response)
 	Login(props *entity.LoginRequest) (resp pkg.Response)
 	RefreshToken(refreshToken string) (resp pkg.Response)
+	Logout(refreshToken string) (resp pkg.Response)
 }
 
 type authUsecase struct {
@@ -232,4 +233,30 @@ func (u *authUsecase) RefreshToken(refreshToken string) (resp pkg.Response) {
 	}
 
 	return pkg.NewResponse(http.StatusOK, "success", data, nil)
+}
+
+func (u *authUsecase) Logout(refreshToken string) (resp pkg.Response) {
+	db := database.Get()
+
+	tokenHashed := pkg.Hash(refreshToken)
+
+	tx, err := db.Beginx()
+	if err != nil {
+		u.log.Errorf("error start transaction: %s", err.Error())
+		return pkg.NewResponse(http.StatusUnauthorized, pkg.ErrNotAuthorized.Error(), nil, nil)
+	}
+	defer tx.Rollback()
+
+	err = u.authRepo.DeleteRefreshTokenByToken(tokenHashed, tx)
+	if err != nil {
+		u.log.Errorf("authRepo.DeleteRefreshTokenById: %s", err.Error())
+		return pkg.NewResponse(http.StatusUnauthorized, pkg.ErrNotAuthorized.Error(), nil, nil)
+	}
+
+	if err := tx.Commit(); err != nil {
+		u.log.Errorf("failed commit tx: %s", err.Error())
+		return pkg.NewResponse(http.StatusUnauthorized, pkg.ErrNotAuthorized.Error(), nil, nil)
+	}
+
+	return pkg.NewResponse(http.StatusOK, "success", nil, nil)
 }

@@ -18,6 +18,7 @@ type AuthController interface {
 	Login(ctx *fiber.Ctx) error
 	CheckToken(ctx *fiber.Ctx) error
 	RefreshToken(ctx *fiber.Ctx) error
+	Logout(ctx *fiber.Ctx) error
 }
 
 type authController struct {
@@ -160,4 +161,28 @@ func (c *authController) RefreshToken(ctx *fiber.Ctx) error {
 	}
 
 	return ctx.Status(response.Status.Code).JSON(response)
+}
+
+func (c *authController) Logout(ctx *fiber.Ctx) error {
+	refreshToken := ctx.Cookies("refresh_token")
+
+	c.usecase.Logout(refreshToken)
+
+	ctx.Cookie(&fiber.Cookie{
+		Name:     "access_token",
+		Value:    "",
+		HTTPOnly: true,
+		Secure:   true,
+		SameSite: "Lax",
+	})
+
+	ctx.Cookie(&fiber.Cookie{
+		Name:     "refresh_token",
+		Value:    "",
+		HTTPOnly: true,
+		Secure:   true,
+		SameSite: "Lax",
+	})
+
+	return ctx.Status(200).JSON(pkg.NewResponse(http.StatusOK, "success", nil, nil))
 }

@@ -397,7 +397,7 @@
 						}
 					],
 					"request": {
-						"method": "GET",
+						"method": "POST",
 						"header": [],
 						"url": {
 							"raw": "{{url}}/api/v1/refresh-token",
@@ -415,7 +415,7 @@
 						{
 							"name": "200",
 							"originalRequest": {
-								"method": "GET",
+								"method": "POST",
 								"header": [],
 								"url": {
 									"raw": "{{url}}/api/v1/refresh-token",
@@ -460,7 +460,7 @@
 						{
 							"name": "401",
 							"originalRequest": {
-								"method": "GET",
+								"method": "POST",
 								"header": [],
 								"url": {
 									"raw": "{{url}}/api/v1/refresh-token",
@@ -493,6 +493,84 @@
 							],
 							"cookie": [],
 							"body": "{\n    \"code\": 401,\n    \"status\": \"Unauthorized\",\n    \"message\": \"invalid or expired token\",\n    \"is_success\": false\n}"
+						}
+					]
+				},
+				{
+					"name": "logout",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{url}}/api/v1/logout",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"logout"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "200",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"url": {
+									"raw": "{{url}}/api/v1/logout",
+									"host": [
+										"{{url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"logout"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "Date",
+									"value": "Sat, 13 Dec 2025 08:30:58 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								},
+								{
+									"key": "Content-Length",
+									"value": "64"
+								},
+								{
+									"key": "Set-Cookie",
+									"value": "access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InRlc3RAZ21haWwuY29tIiwiZXhwIjoxNzY1NjE1NTU5LCJpYXQiOjE3NjU2MTQ2NTksImlkIjo2LCJ0eXBlIjoiYWNjZXNzIiwidXNlcm5hbWUiOiJlZ2kifQ.jBwyFU0R3iTyGGg3SN2vUC5o3owya0GSyLAYjSArszY; max-age=900; path=/; HttpOnly; secure; SameSite=Lax"
+								},
+								{
+									"key": "Set-Cookie",
+									"value": "refresh_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NjYyMTk0NTksImlhdCI6MTc2NTYxNDY1OSwiaWQiOjYsInR5cGUiOiJyZWZyZXNoIn0.7np5ISKZdXbR3xUGu3lstv48n4AfN5SrpDZsm0nRwxY; max-age=604800; path=/; HttpOnly; secure; SameSite=Lax"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"code\": 200,\n    \"status\": \"OK\",\n    \"message\": \"success\",\n    \"is_success\": true\n}"
 						}
 					]
 				}
