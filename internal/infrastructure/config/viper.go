@@ -25,7 +25,6 @@ func NewViper() {
 	}
 
 	viperInstance = config
-	fmt.Println("JWT_SECRET:", viperInstance.GetString("JWT_SECRET"))
 }
 
 func GetString(key string) string {
