@@ -12,6 +12,7 @@ import (
 type UserRepository interface {
 	GetByUsername(username string, db *sqlx.DB) (entity.User, error)
 	Insert(data *entity.User, db *sqlx.Tx) (result uint, err error)
+	GetById(id uint, db *sqlx.DB) (result entity.User, err error)
 }
 
 type userRepo struct {
@@ -19,6 +20,24 @@ type userRepo struct {
 
 func NewUserRepository() UserRepository {
 	return &userRepo{}
+}
+
+func (r *userRepo) GetById(id uint, db *sqlx.DB) (result entity.User, err error) {
+	dialect := pkg.GetDialect()
+
+	dataset := dialect.From("users").Select(goqu.I("username"), goqu.I("password"), goqu.I("email"), goqu.I("id"), goqu.I("name")).Where(goqu.I("id").Eq(id))
+
+	query, val, err := dataset.ToSQL()
+	if err != nil {
+		return result, fmt.Errorf("failed to build SQL query: %w", err)
+	}
+
+	err = db.Get(&result, query, val...)
+	if err != nil {
+		return result, err
+	}
+
+	return
 }
 
 func (r *userRepo) GetByUsername(username string, db *sqlx.DB) (result entity.User, err error) {

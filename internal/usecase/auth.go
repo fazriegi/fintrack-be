@@ -12,13 +12,13 @@ import (
 	"github.com/fazriegi/fintrack-be/internal/infrastructure/logger"
 	"github.com/fazriegi/fintrack-be/internal/infrastructure/repository"
 	"github.com/fazriegi/fintrack-be/internal/pkg"
-
 	"github.com/sirupsen/logrus"
 )
 
 type AuthUsecase interface {
 	Register(props *entity.RegisterRequest) (resp pkg.Response)
 	Login(props *entity.LoginRequest) (resp pkg.Response)
+	RefreshToken(refreshToken string) (resp pkg.Response)
 }
 
 type authUsecase struct {
@@ -130,10 +130,10 @@ func (u *authUsecase) Login(props *entity.LoginRequest) (resp pkg.Response) {
 	}
 	defer tx.Rollback()
 
-	refreshTokenData := map[string]any{
-		"user_id":    existingUser.ID,
-		"token":      pkg.Hash(refreshToken),
-		"expired_at": time.Now().Add(time.Duration(config.GetUint("jwt.refreshToken.expDay")) * 24 * time.Hour),
+	refreshTokenData := entity.RefreshToken{
+		UserId:    existingUser.ID,
+		Token:     pkg.Hash(refreshToken),
+		ExpiredAt: time.Now().Add(time.Duration(config.GetUint("jwt.refreshToken.expDay")) * 24 * time.Hour),
 	}
 
 	_, err = u.authRepo.InsertRefreshToken(refreshTokenData, tx)
@@ -155,6 +155,80 @@ func (u *authUsecase) Login(props *entity.LoginRequest) (resp pkg.Response) {
 			Username: existingUser.Username,
 			Email:    existingUser.Email,
 		},
+	}
+
+	return pkg.NewResponse(http.StatusOK, "success", data, nil)
+}
+
+func (u *authUsecase) RefreshToken(refreshToken string) (resp pkg.Response) {
+	db := database.Get()
+
+	claims, err := u.jwt.VerifyToken(refreshToken, "refresh")
+	if err != nil {
+		return pkg.NewResponse(http.StatusUnauthorized, err.Error(), nil, nil)
+	}
+
+	userID := uint(claims["id"].(float64))
+
+	existingUser, err := u.userRepo.GetById(userID, db)
+	if err != nil {
+		u.log.Errorf("userRepo.GetById: %s", err.Error())
+		return pkg.NewResponse(http.StatusUnauthorized, pkg.ErrNotAuthorized.Error(), nil, nil)
+	}
+
+	tokenHashed := pkg.Hash(refreshToken)
+
+	existingToken, err := u.authRepo.GetRefreshToken(tokenHashed, userID, db)
+	if err != nil {
+		u.log.Errorf("u.authRepo.GetRefreshToken: %s", err.Error())
+		return pkg.NewResponse(http.StatusUnauthorized, pkg.ErrNotAuthorized.Error(), nil, nil)
+	}
+
+	newAccessToken, err := u.jwt.GenerateAccessToken(existingUser.ID, existingUser.Email, existingUser.Username)
+	if err != nil {
+		u.log.Errorf("u.jwt.GenerateAccessToken: %s", err.Error())
+		return pkg.NewResponse(http.StatusUnauthorized, pkg.ErrNotAuthorized.Error(), nil, nil)
+	}
+
+	newRefreshToken, err := u.jwt.GenerateRefreshToken(userID)
+	if err != nil {
+		u.log.Errorf("u.jwt.GenerateRefreshToken: %s", err.Error())
+		return pkg.NewResponse(http.StatusUnauthorized, pkg.ErrNotAuthorized.Error(), nil, nil)
+	}
+
+	tx, err := db.Beginx()
+	if err != nil {
+		u.log.Errorf("error start transaction: %s", err.Error())
+		return pkg.NewResponse(http.StatusUnauthorized, pkg.ErrNotAuthorized.Error(), nil, nil)
+	}
+	defer tx.Rollback()
+
+	err = u.authRepo.DeleteRefreshTokenById(existingToken.ID, tx)
+	if err != nil {
+		u.log.Errorf("authRepo.DeleteRefreshTokenById: %s", err.Error())
+		return pkg.NewResponse(http.StatusUnauthorized, pkg.ErrNotAuthorized.Error(), nil, nil)
+	}
+
+	refreshTokenData := entity.RefreshToken{
+		UserId:    existingUser.ID,
+		Token:     pkg.Hash(newRefreshToken),
+		ExpiredAt: time.Now().Add(time.Duration(config.GetUint("jwt.refreshToken.expDay")) * 24 * time.Hour),
+	}
+
+	_, err = u.authRepo.InsertRefreshToken(refreshTokenData, tx)
+	if err != nil {
+		u.log.Errorf("authRepo.InsertRefreshToken: %s", err.Error())
+		return pkg.NewResponse(http.StatusUnauthorized, pkg.ErrNotAuthorized.Error(), nil, nil)
+	}
+
+	if err := tx.Commit(); err != nil {
+		u.log.Errorf("failed commit tx: %s", err.Error())
+		return pkg.NewResponse(http.StatusUnauthorized, pkg.ErrNotAuthorized.Error(), nil, nil)
+	}
+
+	data := map[string]any{
+		"access_token":  newAccessToken,
+		"refresh_token": newRefreshToken,
 	}
 
 	return pkg.NewResponse(http.StatusOK, "success", data, nil)

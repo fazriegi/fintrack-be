@@ -12,6 +12,7 @@ FinTrack BE is a backend application for managing assets, liabilities, and perso
 
 - User Registration
 - User Login
+- Refresh Token
 
 ## Database Design
 

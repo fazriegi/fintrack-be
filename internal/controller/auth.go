@@ -17,6 +17,7 @@ type AuthController interface {
 	Register(ctx *fiber.Ctx) error
 	Login(ctx *fiber.Ctx) error
 	CheckToken(ctx *fiber.Ctx) error
+	RefreshToken(ctx *fiber.Ctx) error
 }
 
 type authController struct {
@@ -120,4 +121,43 @@ func (c *authController) Login(ctx *fiber.Ctx) error {
 
 func (c *authController) CheckToken(ctx *fiber.Ctx) error {
 	return ctx.Status(200).JSON(pkg.NewResponse(http.StatusOK, "success", nil, nil))
+}
+
+func (c *authController) RefreshToken(ctx *fiber.Ctx) error {
+	refreshToken := ctx.Cookies("refresh_token")
+
+	response := c.usecase.RefreshToken(refreshToken)
+
+	if response.Data != nil {
+		data, ok := response.Data.(map[string]any)
+		if !ok {
+			c.logger.Errorf("error convert data")
+			return ctx.Status(http.StatusUnauthorized).JSON(pkg.NewResponse(http.StatusUnauthorized, pkg.ErrNotAuthorized.Error(), nil, nil))
+		}
+
+		accessTokenExp := config.GetUint("jwt.accessToken.expMinute")
+		refreshTokenExp := config.GetUint("jwt.refreshToken.expDay")
+
+		ctx.Cookie(&fiber.Cookie{
+			Name:     "access_token",
+			Value:    fmt.Sprint(data["access_token"]),
+			HTTPOnly: true,
+			Secure:   true,
+			SameSite: "Lax",
+			MaxAge:   int(accessTokenExp) * 60, // minute
+		})
+
+		ctx.Cookie(&fiber.Cookie{
+			Name:     "refresh_token",
+			Value:    fmt.Sprint(data["refresh_token"]),
+			HTTPOnly: true,
+			Secure:   true,
+			SameSite: "Lax",
+			MaxAge:   int(refreshTokenExp) * 24 * 60 * 60, // day
+		})
+
+		response.Data = nil
+	}
+
+	return ctx.Status(response.Status.Code).JSON(response)
 }

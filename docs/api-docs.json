@@ -16,7 +16,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"name\":\"test\",\n    \"email\": \"test@gmail.com\",\n    \"username\": \"test\",\n    \"password\": \"test23@\"\n}",
+							"raw": "{\n    \"name\":\"test\",\n    \"email\": \"test@gmail.com\",\n    \"username\": \"egi\",\n    \"password\": \"egi123\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -37,7 +37,7 @@
 					},
 					"response": [
 						{
-							"name": "success",
+							"name": "200",
 							"originalRequest": {
 								"method": "POST",
 								"header": [],
@@ -152,7 +152,7 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"username\": \"test\",\n    \"password\": \"test213@\"\n}",
+							"raw": "{\n    \"username\": \"egi\",\n    \"password\": \"egi123\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -172,52 +172,6 @@
 						}
 					},
 					"response": [
-						{
-							"name": "success",
-							"originalRequest": {
-								"method": "POST",
-								"header": [],
-								"body": {
-									"mode": "raw",
-									"raw": "{\n    \"username\": \"test\",\n    \"password\": \"test123@\"\n}",
-									"options": {
-										"raw": {
-											"language": "json"
-										}
-									}
-								},
-								"url": {
-									"raw": "localhost:8080/auth/login",
-									"host": [
-										"localhost"
-									],
-									"port": "8080",
-									"path": [
-										"auth",
-										"login"
-									]
-								}
-							},
-							"status": "OK",
-							"code": 200,
-							"_postman_previewlanguage": null,
-							"header": [
-								{
-									"key": "Date",
-									"value": "Sun, 24 Aug 2025 04:16:19 GMT"
-								},
-								{
-									"key": "Content-Type",
-									"value": "application/json"
-								},
-								{
-									"key": "Content-Length",
-									"value": "251"
-								}
-							],
-							"cookie": [],
-							"body": "{\n    \"code\": 200,\n    \"status\": \"success\",\n    \"message\": \"login success\",\n    \"is_success\": true,\n    \"data\": {\n        \"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6IiIsImV4cCI6MTc1NjAxMjU3OSwiaWQiOjQsInVzZXJuYW1lIjoiZWdpZTIyIn0.Z6cHFdqG1lkIJ3pX_G-QL1kaTFUeQE5KklXB1GRrJq8\"\n    }\n}"
-						},
 						{
 							"name": "401",
 							"originalRequest": {
@@ -263,6 +217,60 @@
 							],
 							"cookie": [],
 							"body": "{\n    \"code\": 401,\n    \"status\": \"unauthorized\",\n    \"message\": \"invalid username or password\",\n    \"is_success\": false,\n    \"data\": null\n}"
+						},
+						{
+							"name": "200",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"username\": \"test\",\n    \"password\": \"test23@\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{url}}/api/v1/login",
+									"host": [
+										"{{url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"login"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "Date",
+									"value": "Sat, 13 Dec 2025 07:15:28 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								},
+								{
+									"key": "Content-Length",
+									"value": "139"
+								},
+								{
+									"key": "Set-Cookie",
+									"value": "access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InRlc3RAZ21haWwuY29tIiwiZXhwIjoxNzY1NjExMDI4LCJpYXQiOjE3NjU2MTAxMjgsImlkIjoxLCJ0eXBlIjoiYWNjZXNzIiwidXNlcm5hbWUiOiJ0ZXN0In0.OgC_usCOR_aGBRJUUowh1kyO7X_VkrWOMG-Z6l1033s; max-age=900; path=/; HttpOnly; secure; SameSite=Lax"
+								},
+								{
+									"key": "Set-Cookie",
+									"value": "refresh_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NjYyMTQ5MjgsImlhdCI6MTc2NTYxMDEyOCwiaWQiOjEsInR5cGUiOiJyZWZyZXNoIn0.30yfuuSPh5WOcyYCbqr9LqkUKr3XI73DP4Z4wcsbVwI; max-age=604800; path=/; HttpOnly; secure; SameSite=Lax"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"code\": 200,\n    \"status\": \"OK\",\n    \"message\": \"success\",\n    \"is_success\": true,\n    \"data\": {\n        \"user\": {\n            \"name\": \"test\",\n            \"username\": \"test\",\n            \"email\": \"test@gmail.com\"\n        }\n    }\n}"
 						}
 					]
 				},
@@ -273,9 +281,7 @@
 							"listen": "test",
 							"script": {
 								"exec": [
-									"let response = pm.response.json();",
-									"",
-									"pm.environment.set(\"token\", response.data.token);"
+									""
 								],
 								"type": "text/javascript",
 								"packages": {},
@@ -299,43 +305,6 @@
 						}
 					},
 					"response": [
-						{
-							"name": "success",
-							"originalRequest": {
-								"method": "GET",
-								"header": [],
-								"url": {
-									"raw": "{{url}}/api/v1/check-token",
-									"host": [
-										"{{url}}"
-									],
-									"path": [
-										"api",
-										"v1",
-										"check-token"
-									]
-								}
-							},
-							"status": "OK",
-							"code": 200,
-							"_postman_previewlanguage": null,
-							"header": [
-								{
-									"key": "Date",
-									"value": "Sun, 24 Aug 2025 04:16:19 GMT"
-								},
-								{
-									"key": "Content-Type",
-									"value": "application/json"
-								},
-								{
-									"key": "Content-Length",
-									"value": "251"
-								}
-							],
-							"cookie": [],
-							"body": "{\n    \"code\": 200,\n    \"status\": \"success\",\n    \"message\": \"success\",\n    \"is_success\": true\n}"
-						},
 						{
 							"name": "401",
 							"originalRequest": {
@@ -372,6 +341,158 @@
 							],
 							"cookie": [],
 							"body": "{\n    \"code\": 401,\n    \"status\": \"Unauthorized\",\n    \"message\": \"sign in to proceed\",\n    \"is_success\": false\n}"
+						},
+						{
+							"name": "200",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{url}}/api/v1/check-token",
+									"host": [
+										"{{url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"check-token"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "Date",
+									"value": "Sat, 13 Dec 2025 08:01:05 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								},
+								{
+									"key": "Content-Length",
+									"value": "64"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"code\": 200,\n    \"status\": \"OK\",\n    \"message\": \"success\",\n    \"is_success\": true\n}"
+						}
+					]
+				},
+				{
+					"name": "refresh token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{url}}/api/v1/refresh-token",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"refresh-token"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "200",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{url}}/api/v1/refresh-token",
+									"host": [
+										"{{url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"refresh-token"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "Date",
+									"value": "Sat, 13 Dec 2025 08:30:58 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								},
+								{
+									"key": "Content-Length",
+									"value": "64"
+								},
+								{
+									"key": "Set-Cookie",
+									"value": "access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InRlc3RAZ21haWwuY29tIiwiZXhwIjoxNzY1NjE1NTU5LCJpYXQiOjE3NjU2MTQ2NTksImlkIjo2LCJ0eXBlIjoiYWNjZXNzIiwidXNlcm5hbWUiOiJlZ2kifQ.jBwyFU0R3iTyGGg3SN2vUC5o3owya0GSyLAYjSArszY; max-age=900; path=/; HttpOnly; secure; SameSite=Lax"
+								},
+								{
+									"key": "Set-Cookie",
+									"value": "refresh_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NjYyMTk0NTksImlhdCI6MTc2NTYxNDY1OSwiaWQiOjYsInR5cGUiOiJyZWZyZXNoIn0.7np5ISKZdXbR3xUGu3lstv48n4AfN5SrpDZsm0nRwxY; max-age=604800; path=/; HttpOnly; secure; SameSite=Lax"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"code\": 200,\n    \"status\": \"OK\",\n    \"message\": \"success\",\n    \"is_success\": true\n}"
+						},
+						{
+							"name": "401",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{url}}/api/v1/refresh-token",
+									"host": [
+										"{{url}}"
+									],
+									"path": [
+										"api",
+										"v1",
+										"refresh-token"
+									]
+								}
+							},
+							"status": "Unauthorized",
+							"code": 401,
+							"_postman_previewlanguage": null,
+							"header": [
+								{
+									"key": "Date",
+									"value": "Sat, 13 Dec 2025 08:34:08 GMT"
+								},
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								},
+								{
+									"key": "Content-Length",
+									"value": "92"
+								}
+							],
+							"cookie": [],
+							"body": "{\n    \"code\": 401,\n    \"status\": \"Unauthorized\",\n    \"message\": \"invalid or expired token\",\n    \"is_success\": false\n}"
 						}
 					]
 				}
