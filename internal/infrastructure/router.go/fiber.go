@@ -23,4 +23,12 @@ func NewRoute(app *fiber.App, jwt *pkg.JWT) {
 		v1.Post("/refresh-token", authController.RefreshToken)
 		v1.Post("/logout", authController.Logout)
 	}
+
+	assetRepo := repository.NewAssetRepository()
+	assetUC := usecase.NewAssetUsecase(assetRepo, jwt)
+	assetController := controller.NewAssetController(assetUC)
+	asset := v1.Group("asset")
+	{
+		asset.Get("/list-category", middleware.Authentication(jwt), assetController.ListAssetCategory)
+	}
 }
