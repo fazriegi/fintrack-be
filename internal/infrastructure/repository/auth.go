@@ -14,6 +14,7 @@ type AuthRepository interface {
 	GetRefreshToken(token string, userId uint, db *sqlx.DB) (result entity.RefreshToken, err error)
 	DeleteRefreshTokenById(id uint, tx *sqlx.Tx) error
 	DeleteRefreshTokenByToken(token string, tx *sqlx.Tx) error
+	InitUserAssetCategories(userId uint, tx *sqlx.Tx) error
 }
 
 type authRepo struct {
@@ -94,6 +95,29 @@ func (r *authRepo) DeleteRefreshTokenByToken(token string, tx *sqlx.Tx) error {
 	dialect := pkg.GetDialect()
 
 	dataset := dialect.Delete("refresh_tokens").Where(goqu.I("token").Eq(token))
+	sql, val, err := dataset.ToSQL()
+	if err != nil {
+		return fmt.Errorf("failed to build SQL query: %w", err)
+	}
+
+	_, err = tx.Exec(sql, val...)
+	if err != nil {
+		return fmt.Errorf("failed to execute insert: %w", err)
+	}
+
+	return nil
+}
+
+func (r *authRepo) InitUserAssetCategories(userId uint, tx *sqlx.Tx) error {
+	dialect := pkg.GetDialect()
+
+	dataset := dialect.Insert("user_asset_categories").
+		Cols("name", "user_id").
+		FromQuery(
+			dialect.
+				From("asset_categories").
+				Select(goqu.I("name"), goqu.L("?", userId)),
+		)
 	sql, val, err := dataset.ToSQL()
 	if err != nil {
 		return fmt.Errorf("failed to build SQL query: %w", err)

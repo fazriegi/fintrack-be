@@ -77,9 +77,15 @@ func (u *authUsecase) Register(props *entity.RegisterRequest) (resp pkg.Response
 		Username: props.Username,
 	}
 
-	_, err = u.userRepo.Insert(&user, tx)
+	userId, err := u.userRepo.Insert(&user, tx)
 	if err != nil {
 		u.log.Errorf("userRepo.Insert: %s", err.Error())
+		return pkg.NewResponse(http.StatusInternalServerError, pkg.ErrServer.Error(), nil, nil)
+	}
+
+	err = u.authRepo.InitUserAssetCategories(userId, tx)
+	if err != nil {
+		u.log.Errorf("authRepo.InitUserAssetCategories: %s", err.Error())
 		return pkg.NewResponse(http.StatusInternalServerError, pkg.ErrServer.Error(), nil, nil)
 	}
 
