@@ -13,6 +13,7 @@ import (
 
 type AssetController interface {
 	ListAssetCategory(ctx *fiber.Ctx) error
+	ListAsset(ctx *fiber.Ctx) error
 	SubmitAsset(ctx *fiber.Ctx) error
 }
 
@@ -36,6 +37,26 @@ func (c *assetController) ListAssetCategory(ctx *fiber.Ctx) error {
 	}
 
 	response := c.usecase.ListAssetCategory(user.ID)
+
+	return ctx.Status(response.Status.Code).JSON(response)
+}
+
+func (c *assetController) ListAsset(ctx *fiber.Ctx) error {
+	var reqQuery entity.ListAssetRequest
+
+	if err := ctx.QueryParser(&reqQuery); err != nil {
+		c.logger.Errorf("error parsing query param: %s", err.Error())
+		return ctx.Status(http.StatusBadRequest).JSON(pkg.NewResponse(http.StatusBadRequest, pkg.ErrParseQueryParam.Error(), nil, nil))
+	}
+
+	user, ok := ctx.Locals("user").(entity.User)
+	if !ok {
+		return ctx.Status(http.StatusUnauthorized).JSON(pkg.NewResponse(http.StatusUnauthorized, pkg.ErrNotAuthorized.Error(), nil, nil))
+	}
+
+	reqQuery.UserId = user.ID
+
+	response := c.usecase.ListAsset(reqQuery)
 
 	return ctx.Status(response.Status.Code).JSON(response)
 }

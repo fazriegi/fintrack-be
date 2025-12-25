@@ -1,6 +1,9 @@
 package entity
 
-import "github.com/shopspring/decimal"
+import (
+	"github.com/fazriegi/fintrack-be/internal/pkg"
+	"github.com/shopspring/decimal"
+)
 
 type (
 	AssetCategory struct {
@@ -9,12 +12,14 @@ type (
 	}
 
 	Asset struct {
-		Name          string          `db:"name"`
-		CategoryId    uint            `db:"category_id"`
-		UserId        uint            `db:"user_id"`
-		Amount        decimal.Decimal `db:"amount"`
-		PurchasePrice decimal.Decimal `db:"purchase_price"`
-		Status        string          `db:"status"`
+		Id            uint            `db:"id" json:"id"`
+		Name          string          `db:"name" json:"name"`
+		CategoryId    uint            `db:"category_id" json:"-"`
+		Category      string          `db:"category" json:"category"`
+		UserId        uint            `db:"user_id" json:"-"`
+		Amount        decimal.Decimal `db:"amount" json:"amount"`
+		PurchasePrice decimal.Decimal `db:"purchase_price" json:"purchase_price"`
+		Status        string          `db:"status" json:"status"`
 	}
 
 	SubmitAssetRequest struct {
@@ -24,5 +29,12 @@ type (
 		Amount        decimal.Decimal `json:"amount" validate:"required"`
 		PurchasePrice decimal.Decimal `json:"purchase_price" validate:"required"`
 		Status        string          `json:"status" validate:"required,oneof=active inactive sold"`
+	}
+
+	ListAssetRequest struct {
+		pkg.PaginationRequest
+		UserId   uint
+		Name     string `query:"name"`
+		Category string `query:"category"`
 	}
 )

@@ -11,6 +11,7 @@ import (
 
 type AssetRepository interface {
 	ListAssetCategory(userId uint, db *sqlx.DB) ([]entity.AssetCategory, error)
+	ListAsset(param entity.ListAssetRequest, db *sqlx.DB) ([]entity.Asset, error)
 	Insert(data entity.Asset, tx *sqlx.Tx) error
 }
 
@@ -32,6 +33,66 @@ func (r assetRepo) ListAssetCategory(userId uint, db *sqlx.DB) (result []entity.
 		Where(
 			goqu.I("user_id").Eq(userId),
 		)
+
+	query, val, err := dataset.ToSQL()
+	if err != nil {
+		return result, fmt.Errorf("failed to build SQL query: %w", err)
+	}
+
+	err = db.Select(&result, query, val...)
+	if err != nil {
+		return result, err
+	}
+
+	return
+}
+
+func (r assetRepo) ListAsset(param entity.ListAssetRequest, db *sqlx.DB) (result []entity.Asset, err error) {
+	dialect := pkg.GetDialect()
+
+	dataset := dialect.From(goqu.T("assets").As("a")).
+		Join(goqu.T("user_asset_categories").As("b"), goqu.On(
+			goqu.I("a.category_id").Eq(goqu.I("b.id")),
+			goqu.I("a.user_id").Eq(goqu.I("b.user_id")),
+		)).
+		Select(
+			goqu.I("a.id"),
+			goqu.I("a.name"),
+			goqu.I("b.name").As("category"),
+			goqu.I("a.amount"),
+			goqu.I("a.purchase_price"),
+			goqu.I("a.status"),
+		).
+		Where(
+			goqu.I("a.user_id").Eq(param.UserId),
+		)
+
+	if param.Name != "" {
+		dataset = dataset.Where(goqu.I("a.name").ILike("%" + param.Name + "%"))
+	}
+
+	if param.Category != "" {
+		dataset = dataset.Where(goqu.I("b.name").ILike("%" + param.Category + "%"))
+	}
+
+	dataset = pkg.QueryWithPagination(dataset, param.PaginationRequest)
+
+	sql, val, err := dataset.ToSQL()
+	if err != nil {
+		return nil, fmt.Errorf("failed to build SQL query: %w", err)
+	}
+
+	row, err := db.Queryx(sql, val...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute query: %w", err)
+	}
+	defer row.Close()
+
+	result = make([]entity.Asset, 0)
+	err = pkg.ScanRowsIntoStructs(row, &result)
+	if err != nil {
+		return nil, fmt.Errorf("failed to scan rows into structs: %w", err)
+	}
 
 	query, val, err := dataset.ToSQL()
 	if err != nil {

@@ -15,6 +15,7 @@ import (
 
 type AssetUsecase interface {
 	ListAssetCategory(userId uint) (resp pkg.Response)
+	ListAsset(param entity.ListAssetRequest) (resp pkg.Response)
 	SubmitAsset(param entity.SubmitAssetRequest) (resp pkg.Response)
 }
 
@@ -43,6 +44,21 @@ func (u *assetUsecase) ListAssetCategory(userId uint) (resp pkg.Response) {
 	data, err := u.assetRepo.ListAssetCategory(userId, db)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		u.log.Errorf("assetRepo.ListAssetCategory: %s", err.Error())
+		return pkg.NewResponse(http.StatusInternalServerError, pkg.ErrServer.Error(), nil, nil)
+	}
+
+	return pkg.NewResponse(http.StatusOK, "success", data, nil)
+}
+
+func (u *assetUsecase) ListAsset(param entity.ListAssetRequest) (resp pkg.Response) {
+	var (
+		err error
+		db  = database.Get()
+	)
+
+	data, err := u.assetRepo.ListAsset(param, db)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		u.log.Errorf("assetRepo.ListAsset: %s", err.Error())
 		return pkg.NewResponse(http.StatusInternalServerError, pkg.ErrServer.Error(), nil, nil)
 	}
 
