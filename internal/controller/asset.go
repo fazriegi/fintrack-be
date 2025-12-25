@@ -13,6 +13,7 @@ import (
 
 type AssetController interface {
 	ListAssetCategory(ctx *fiber.Ctx) error
+	SubmitAsset(ctx *fiber.Ctx) error
 }
 
 type assetController struct {
@@ -35,6 +36,36 @@ func (c *assetController) ListAssetCategory(ctx *fiber.Ctx) error {
 	}
 
 	response := c.usecase.ListAssetCategory(user.ID)
+
+	return ctx.Status(response.Status.Code).JSON(response)
+}
+
+func (c *assetController) SubmitAsset(ctx *fiber.Ctx) error {
+	var reqBody entity.SubmitAssetRequest
+
+	if err := ctx.BodyParser(&reqBody); err != nil {
+		c.logger.Errorf("error parsing request body: %s", err.Error())
+		return ctx.Status(http.StatusBadRequest).JSON(pkg.NewResponse(http.StatusBadRequest, pkg.ErrParseQueryParam.Error(), nil, nil))
+	}
+
+	// validate reqBody struct
+	validationErr := pkg.ValidateRequest(&reqBody)
+	if len(validationErr) > 0 {
+		errResponse := map[string]any{
+			"errors": validationErr,
+		}
+
+		return ctx.Status(http.StatusUnprocessableEntity).JSON(pkg.NewResponse(http.StatusUnprocessableEntity, pkg.ErrValidation.Error(), errResponse, nil))
+	}
+
+	user, ok := ctx.Locals("user").(entity.User)
+	if !ok {
+		return ctx.Status(http.StatusUnauthorized).JSON(pkg.NewResponse(http.StatusUnauthorized, pkg.ErrNotAuthorized.Error(), nil, nil))
+	}
+
+	reqBody.UserId = user.ID
+
+	response := c.usecase.SubmitAsset(reqBody)
 
 	return ctx.Status(response.Status.Code).JSON(response)
 }

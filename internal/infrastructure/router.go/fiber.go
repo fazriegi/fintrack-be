@@ -30,5 +30,6 @@ func NewRoute(app *fiber.App, jwt *pkg.JWT) {
 	asset := v1.Group("asset")
 	{
 		asset.Get("/list-category", middleware.Authentication(jwt), assetController.ListAssetCategory)
+		asset.Post("/submit", middleware.Authentication(jwt), assetController.SubmitAsset)
 	}
 }
