@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/shopspring/decimal"
 )
 
 type ValidationErrResponse struct {
@@ -30,6 +31,14 @@ func ValidateRequest(data any) []ValidationErrResponse {
 			name = name[:idx]
 		}
 		return name
+	})
+
+	validate.RegisterValidation("decimal_gt_zero", func(fl validator.FieldLevel) bool {
+		val, ok := fl.Field().Interface().(decimal.Decimal)
+		if !ok {
+			return false
+		}
+		return val.GreaterThan(decimal.Zero)
 	})
 
 	err := validate.Struct(data)
