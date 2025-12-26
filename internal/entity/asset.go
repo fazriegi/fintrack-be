@@ -15,6 +15,16 @@ type (
 		Id            uint            `db:"id" json:"id"`
 		Name          string          `db:"name" json:"name"`
 		CategoryId    uint            `db:"category_id" json:"-"`
+		UserId        uint            `db:"user_id" json:"-"`
+		Amount        decimal.Decimal `db:"amount" json:"amount"`
+		PurchasePrice decimal.Decimal `db:"purchase_price" json:"purchase_price"`
+		Status        string          `db:"status" json:"status"`
+	}
+
+	AssetResponse struct {
+		Id            uint            `db:"id" json:"id"`
+		Name          string          `db:"name" json:"name"`
+		CategoryId    uint            `db:"category_id" json:"-"`
 		Category      string          `db:"category" json:"category"`
 		UserId        uint            `db:"user_id" json:"-"`
 		Amount        decimal.Decimal `db:"amount" json:"amount"`

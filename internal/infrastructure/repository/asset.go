@@ -11,7 +11,7 @@ import (
 
 type AssetRepository interface {
 	ListAssetCategory(userId uint, db *sqlx.DB) ([]entity.AssetCategory, error)
-	ListAsset(param entity.ListAssetRequest, db *sqlx.DB) ([]entity.Asset, error)
+	ListAsset(param entity.ListAssetRequest, db *sqlx.DB) ([]entity.AssetResponse, error)
 	Insert(data entity.Asset, tx *sqlx.Tx) error
 }
 
@@ -47,7 +47,7 @@ func (r assetRepo) ListAssetCategory(userId uint, db *sqlx.DB) (result []entity.
 	return
 }
 
-func (r assetRepo) ListAsset(param entity.ListAssetRequest, db *sqlx.DB) (result []entity.Asset, err error) {
+func (r assetRepo) ListAsset(param entity.ListAssetRequest, db *sqlx.DB) (result []entity.AssetResponse, err error) {
 	dialect := pkg.GetDialect()
 
 	dataset := dialect.From(goqu.T("assets").As("a")).
@@ -88,7 +88,7 @@ func (r assetRepo) ListAsset(param entity.ListAssetRequest, db *sqlx.DB) (result
 	}
 	defer row.Close()
 
-	result = make([]entity.Asset, 0)
+	result = make([]entity.AssetResponse, 0)
 	err = pkg.ScanRowsIntoStructs(row, &result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to scan rows into structs: %w", err)
