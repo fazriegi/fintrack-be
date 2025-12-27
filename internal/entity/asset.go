@@ -39,7 +39,7 @@ type (
 		CategoryId    uint            `json:"category_id" validate:"required"`
 		Amount        decimal.Decimal `json:"amount" validate:"required,decimal_gt_zero"`
 		PurchasePrice decimal.Decimal `json:"purchase_price"`
-		Status        string          `json:"status" validate:"required,oneof=active inactive sold"`
+		Status        string          `json:"status" validate:"required,oneof=active archived inactive"`
 	}
 
 	ListAssetRequest struct {
@@ -61,6 +61,6 @@ type (
 		CategoryId    uint            `json:"category_id" validate:"required"`
 		Amount        decimal.Decimal `json:"amount" validate:"required,decimal_gt_zero"`
 		PurchasePrice decimal.Decimal `json:"purchase_price"`
-		Status        string          `json:"status" validate:"required,oneof=active archived sold"`
+		Status        string          `json:"status" validate:"required,oneof=active archived inactive"`
 	}
 )
