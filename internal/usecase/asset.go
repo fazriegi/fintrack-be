@@ -18,6 +18,7 @@ type AssetUsecase interface {
 	ListAssetCategory(userId uint) (resp pkg.Response)
 	ListAsset(param entity.ListAssetRequest) (resp pkg.Response)
 	SubmitAsset(param entity.SubmitAssetRequest) (resp pkg.Response)
+	GetById(param entity.GetAssetByIdRequest) (resp pkg.Response)
 }
 
 type assetUsecase struct {
@@ -123,4 +124,23 @@ func (u *assetUsecase) SubmitAsset(param entity.SubmitAssetRequest) (resp pkg.Re
 	}
 
 	return pkg.NewResponse(http.StatusCreated, "success", param, nil)
+}
+
+func (u *assetUsecase) GetById(param entity.GetAssetByIdRequest) (resp pkg.Response) {
+	var (
+		err error
+		db  = database.Get()
+	)
+
+	data, err := u.assetRepo.GetById(param.Id, param.UserId, db)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return pkg.NewResponse(http.StatusNotFound, pkg.ErrNotFound.Error(), nil, nil)
+		}
+
+		u.log.Errorf("assetRepo.GetById: %s", err.Error())
+		return pkg.NewResponse(http.StatusInternalServerError, pkg.ErrServer.Error(), nil, nil)
+	}
+
+	return pkg.NewResponse(http.StatusOK, "success", data, nil)
 }

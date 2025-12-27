@@ -49,4 +49,9 @@ type (
 		Category string `query:"category"`
 		Status   string `query:"status"`
 	}
+
+	GetAssetByIdRequest struct {
+		UserId uint
+		Id     uint `param:"id"`
+	}
 )

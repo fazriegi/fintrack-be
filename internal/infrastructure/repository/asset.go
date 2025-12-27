@@ -15,6 +15,7 @@ type AssetRepository interface {
 	ListAssetCategory(userId uint, db *sqlx.DB) ([]entity.AssetCategory, error)
 	ListAsset(param entity.ListAssetRequest, db *sqlx.DB) ([]entity.AssetResponse, uint, error)
 	Insert(data entity.Asset, tx *sqlx.Tx) error
+	GetById(id, userId uint, db *sqlx.DB) (result entity.AssetResponse, err error)
 }
 
 type assetRepo struct {
@@ -154,4 +155,39 @@ func (r *assetRepo) Insert(data entity.Asset, tx *sqlx.Tx) error {
 	}
 
 	return nil
+}
+
+func (r *assetRepo) GetById(id, userId uint, db *sqlx.DB) (result entity.AssetResponse, err error) {
+	dialect := pkg.GetDialect()
+
+	dataset := dialect.From(goqu.T("assets").As("a")).
+		Join(goqu.T("user_asset_categories").As("b"), goqu.On(
+			goqu.I("a.category_id").Eq(goqu.I("b.id")),
+			goqu.I("a.user_id").Eq(goqu.I("b.user_id")),
+		)).
+		Select(
+			goqu.I("a.id"),
+			goqu.I("a.name"),
+			goqu.I("b.name").As("category"),
+			goqu.I("a.amount"),
+			goqu.I("a.purchase_price"),
+			goqu.I("a.status"),
+			goqu.L("a.amount * a.purchase_price").As("total_purchase_price"),
+		).
+		Where(
+			goqu.I("a.user_id").Eq(userId),
+			goqu.I("a.id").Eq(id),
+		)
+
+	query, val, err := dataset.ToSQL()
+	if err != nil {
+		return result, fmt.Errorf("failed to build SQL query: %w", err)
+	}
+
+	err = db.Get(&result, query, val...)
+	if err != nil {
+		return result, err
+	}
+
+	return
 }

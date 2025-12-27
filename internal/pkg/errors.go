@@ -8,4 +8,5 @@ var (
 	ErrParseQueryParam = errors.New("error parsing query param")
 	ErrValidation      = errors.New("validation error")
 	ErrNotAuthorized   = errors.New("you're not authorized")
+	ErrNotFound        = errors.New("data not found")
 )
