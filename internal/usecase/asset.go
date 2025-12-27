@@ -3,6 +3,7 @@ package usecase
 import (
 	"database/sql"
 	"errors"
+	"math"
 	"net/http"
 
 	"github.com/fazriegi/fintrack-be/internal/entity"
@@ -56,13 +57,36 @@ func (u *assetUsecase) ListAsset(param entity.ListAssetRequest) (resp pkg.Respon
 		db  = database.Get()
 	)
 
-	data, err := u.assetRepo.ListAsset(param, db)
+	data, total, err := u.assetRepo.ListAsset(param, db)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		u.log.Errorf("assetRepo.ListAsset: %s", err.Error())
 		return pkg.NewResponse(http.StatusInternalServerError, pkg.ErrServer.Error(), nil, nil)
 	}
 
-	return pkg.NewResponse(http.StatusOK, "success", data, nil)
+	var paginationMeta pkg.PaginationMeta
+	if param.Limit != nil && *param.Limit > 0 {
+		limit := int(*param.Limit)
+		page := 1
+
+		if param.Page != nil && *param.Page > 0 {
+			page = int(*param.Page)
+		}
+
+		totalPages := int(math.Ceil(float64(total) / float64(limit)))
+
+		if totalPages > 0 && page > totalPages {
+			page = totalPages
+		}
+
+		paginationMeta = pkg.PaginationMeta{
+			Page:       page,
+			Limit:      limit,
+			Total:      int(total),
+			TotalPages: totalPages,
+		}
+	}
+
+	return pkg.NewResponse(http.StatusOK, "success", data, &paginationMeta)
 }
 
 func (u *assetUsecase) SubmitAsset(param entity.SubmitAssetRequest) (resp pkg.Response) {
