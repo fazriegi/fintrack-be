@@ -61,6 +61,6 @@ type (
 		CategoryId    uint            `json:"category_id" validate:"required"`
 		Amount        decimal.Decimal `json:"amount" validate:"required,decimal_gt_zero"`
 		PurchasePrice decimal.Decimal `json:"purchase_price" validate:"required,decimal_gt_zero"`
-		Status        string          `json:"status" validate:"required,oneof=active inactive sold"`
+		Status        string          `json:"status" validate:"required,oneof=active archived sold"`
 	}
 )
