@@ -78,6 +78,10 @@ func (r assetRepo) ListAsset(param entity.ListAssetRequest, db *sqlx.DB) (result
 		dataset = dataset.Where(goqu.I("b.name").ILike("%" + param.Category + "%"))
 	}
 
+	if param.Status != "" {
+		dataset = dataset.Where(goqu.I("a.status").ILike("%" + param.Status + "%"))
+	}
+
 	result = make([]entity.AssetResponse, 0)
 	g, _ := errgroup.WithContext(context.Background())
 	g.Go(func() error {

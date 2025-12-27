@@ -47,5 +47,6 @@ type (
 		UserId   uint
 		Name     string `query:"name"`
 		Category string `query:"category"`
+		Status   string `query:"status"`
 	}
 )
