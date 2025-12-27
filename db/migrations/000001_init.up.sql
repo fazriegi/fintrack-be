@@ -20,3 +20,12 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
 );
 
 CREATE INDEX idx_refresh_tokens_user_id ON refresh_tokens(user_id);
+
+SET GLOBAL event_scheduler = ON;
+
+CREATE EVENT remove_expired_refresh_tokens
+ON SCHEDULE EVERY 1 DAY
+STARTS CONCAT(CURDATE(), ' 00:00:00')
+DO
+    DELETE FROM refresh_tokens
+    WHERE expired_at < NOW();
