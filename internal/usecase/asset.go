@@ -20,6 +20,7 @@ type AssetUsecase interface {
 	SubmitAsset(param entity.SubmitAssetRequest) (resp pkg.Response)
 	GetById(param entity.GetAssetByIdRequest) (resp pkg.Response)
 	Update(param entity.UpdateAssetRequest) (resp pkg.Response)
+	Delete(param entity.GetAssetByIdRequest) (resp pkg.Response)
 }
 
 type assetUsecase struct {
@@ -201,4 +202,31 @@ func (u *assetUsecase) Update(param entity.UpdateAssetRequest) (resp pkg.Respons
 	}
 
 	return pkg.NewResponse(http.StatusOK, "success", data, nil)
+}
+
+func (u *assetUsecase) Delete(param entity.GetAssetByIdRequest) (resp pkg.Response) {
+	var (
+		err error
+		db  = database.Get()
+	)
+
+	tx, err := db.Beginx()
+	if err != nil {
+		u.log.Errorf("error start transaction: %s", err.Error())
+		return pkg.NewResponse(http.StatusInternalServerError, pkg.ErrServer.Error(), nil, nil)
+	}
+	defer tx.Rollback()
+
+	err = u.assetRepo.Delete(param.Id, param.UserId, tx)
+	if err != nil {
+		u.log.Errorf("assetRepo.Delete: %s", err.Error())
+		return pkg.NewResponse(http.StatusInternalServerError, pkg.ErrServer.Error(), nil, nil)
+	}
+
+	if err := tx.Commit(); err != nil {
+		u.log.Errorf("failed commit tx: %s", err.Error())
+		return pkg.NewResponse(http.StatusInternalServerError, pkg.ErrServer.Error(), nil, nil)
+	}
+
+	return pkg.NewResponse(http.StatusOK, "success", nil, nil)
 }

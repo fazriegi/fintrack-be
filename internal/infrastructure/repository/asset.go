@@ -18,6 +18,7 @@ type AssetRepository interface {
 	Insert(data entity.Asset, tx *sqlx.Tx) error
 	GetById(id, userId uint, forUpdate bool, db *sqlx.DB, tx *sqlx.Tx) (result entity.AssetResponse, err error)
 	Update(data entity.Asset, id, userId uint, tx *sqlx.Tx) error
+	Delete(id, userId uint, tx *sqlx.Tx) error
 }
 
 type assetRepo struct {
@@ -212,6 +213,29 @@ func (r *assetRepo) Update(data entity.Asset, id, userId uint, tx *sqlx.Tx) erro
 	dataset := dialect.
 		Update("assets").
 		Set(data).
+		Where(
+			goqu.I("user_id").Eq(userId),
+			goqu.I("id").Eq(id),
+		)
+
+	sql, val, err := dataset.ToSQL()
+	if err != nil {
+		return fmt.Errorf("failed to build SQL query: %w", err)
+	}
+
+	_, err = tx.Exec(sql, val...)
+	if err != nil {
+		return fmt.Errorf("failed to execute insert: %w", err)
+	}
+
+	return nil
+}
+
+func (r *assetRepo) Delete(id, userId uint, tx *sqlx.Tx) error {
+	dialect := pkg.GetDialect()
+
+	dataset := dialect.
+		Delete("assets").
 		Where(
 			goqu.I("user_id").Eq(userId),
 			goqu.I("id").Eq(id),

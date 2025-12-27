@@ -17,6 +17,7 @@ type AssetController interface {
 	SubmitAsset(ctx *fiber.Ctx) error
 	GetById(ctx *fiber.Ctx) error
 	Update(ctx *fiber.Ctx) error
+	Delete(ctx *fiber.Ctx) error
 }
 
 type assetController struct {
@@ -146,6 +147,26 @@ func (c *assetController) GetById(ctx *fiber.Ctx) error {
 	reqQuery.UserId = user.ID
 
 	response := c.usecase.GetById(reqQuery)
+
+	return ctx.Status(response.Status.Code).JSON(response)
+}
+
+func (c *assetController) Delete(ctx *fiber.Ctx) error {
+	var reqQuery entity.GetAssetByIdRequest
+
+	if err := ctx.ParamsParser(&reqQuery); err != nil {
+		c.logger.Errorf("error parsing query param: %s", err.Error())
+		return ctx.Status(http.StatusBadRequest).JSON(pkg.NewResponse(http.StatusBadRequest, pkg.ErrParseQueryParam.Error(), nil, nil))
+	}
+
+	user, ok := ctx.Locals("user").(entity.User)
+	if !ok {
+		return ctx.Status(http.StatusUnauthorized).JSON(pkg.NewResponse(http.StatusUnauthorized, pkg.ErrNotAuthorized.Error(), nil, nil))
+	}
+
+	reqQuery.UserId = user.ID
+
+	response := c.usecase.Delete(reqQuery)
 
 	return ctx.Status(response.Status.Code).JSON(response)
 }

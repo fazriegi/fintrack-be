@@ -34,5 +34,6 @@ func NewRoute(app *fiber.App, jwt *pkg.JWT) {
 		asset.Get("/list", middleware.Authentication(jwt), assetController.ListAsset)
 		asset.Get("/:id", middleware.Authentication(jwt), assetController.GetById)
 		asset.Put("/:id", middleware.Authentication(jwt), assetController.Update)
+		asset.Delete("/:id", middleware.Authentication(jwt), assetController.Delete)
 	}
 }
