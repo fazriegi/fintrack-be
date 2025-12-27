@@ -10,19 +10,31 @@ import (
 
 func QueryWithPagination(dataset *goqu.SelectDataset, req PaginationRequest) *goqu.SelectDataset {
 	if req.Sort != nil && *req.Sort != "" {
-		parts := strings.Fields(*req.Sort)
-		if len(parts) > 0 {
+		sorts := strings.Split(*req.Sort, ",")
+
+		for _, part := range sorts {
+			part = strings.TrimSpace(part)
+			if part == "" {
+				continue
+			}
+
+			parts := strings.Fields(part)
+			if len(parts) == 0 {
+				continue
+			}
+
 			field := parts[0]
+
 			direction := "ASC"
-			if len(parts) >= 2 && strings.ToUpper(parts[1]) == "DESC" {
+			if len(parts) > 1 && strings.ToUpper(parts[1]) == "DESC" {
 				direction = "DESC"
 			}
 
 			col := goqu.I(field)
 			if direction == "DESC" {
-				dataset = dataset.Order(col.Desc())
+				dataset = dataset.OrderAppend(col.Desc())
 			} else {
-				dataset = dataset.Order(col.Asc())
+				dataset = dataset.OrderAppend(col.Asc())
 			}
 		}
 	}
