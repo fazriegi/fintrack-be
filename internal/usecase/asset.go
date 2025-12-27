@@ -19,6 +19,7 @@ type AssetUsecase interface {
 	ListAsset(param entity.ListAssetRequest) (resp pkg.Response)
 	SubmitAsset(param entity.SubmitAssetRequest) (resp pkg.Response)
 	GetById(param entity.GetAssetByIdRequest) (resp pkg.Response)
+	Update(param entity.UpdateAssetRequest) (resp pkg.Response)
 }
 
 type assetUsecase struct {
@@ -132,7 +133,7 @@ func (u *assetUsecase) GetById(param entity.GetAssetByIdRequest) (resp pkg.Respo
 		db  = database.Get()
 	)
 
-	data, err := u.assetRepo.GetById(param.Id, param.UserId, db)
+	data, err := u.assetRepo.GetById(param.Id, param.UserId, false, db, nil)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return pkg.NewResponse(http.StatusNotFound, pkg.ErrNotFound.Error(), nil, nil)
@@ -140,6 +141,63 @@ func (u *assetUsecase) GetById(param entity.GetAssetByIdRequest) (resp pkg.Respo
 
 		u.log.Errorf("assetRepo.GetById: %s", err.Error())
 		return pkg.NewResponse(http.StatusInternalServerError, pkg.ErrServer.Error(), nil, nil)
+	}
+
+	return pkg.NewResponse(http.StatusOK, "success", data, nil)
+}
+
+func (u *assetUsecase) Update(param entity.UpdateAssetRequest) (resp pkg.Response) {
+	var (
+		err error
+		db  = database.Get()
+	)
+
+	tx, err := db.Beginx()
+	if err != nil {
+		u.log.Errorf("error start transaction: %s", err.Error())
+		return pkg.NewResponse(http.StatusInternalServerError, pkg.ErrServer.Error(), nil, nil)
+	}
+	defer tx.Rollback()
+
+	data, err := u.assetRepo.GetById(param.Id, param.UserId, true, nil, tx)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return pkg.NewResponse(http.StatusNotFound, pkg.ErrNotFound.Error(), nil, nil)
+		}
+
+		u.log.Errorf("assetRepo.GetById: %s", err.Error())
+		return pkg.NewResponse(http.StatusInternalServerError, pkg.ErrServer.Error(), nil, nil)
+	}
+
+	dataUpdate := entity.Asset{
+		Id:            param.Id,
+		Name:          param.Name,
+		CategoryId:    param.CategoryId,
+		UserId:        param.UserId,
+		Amount:        param.Amount,
+		PurchasePrice: param.PurchasePrice,
+		Status:        param.Status,
+	}
+
+	err = u.assetRepo.Update(dataUpdate, param.Id, param.UserId, tx)
+	if err != nil {
+		u.log.Errorf("assetRepo.Update: %s", err.Error())
+		return pkg.NewResponse(http.StatusInternalServerError, pkg.ErrServer.Error(), nil, nil)
+	}
+
+	if err := tx.Commit(); err != nil {
+		u.log.Errorf("failed commit tx: %s", err.Error())
+		return pkg.NewResponse(http.StatusInternalServerError, pkg.ErrServer.Error(), nil, nil)
+	}
+
+	data = entity.AssetResponse{
+		Id:            param.Id,
+		Name:          param.Name,
+		CategoryId:    param.CategoryId,
+		UserId:        param.UserId,
+		Amount:        param.Amount,
+		PurchasePrice: param.PurchasePrice,
+		Status:        param.Status,
 	}
 
 	return pkg.NewResponse(http.StatusOK, "success", data, nil)

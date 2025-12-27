@@ -24,7 +24,7 @@ type (
 	AssetResponse struct {
 		Id                 uint            `db:"id" json:"id"`
 		Name               string          `db:"name" json:"name"`
-		CategoryId         uint            `db:"category_id" json:"-"`
+		CategoryId         uint            `db:"category_id" json:"category_id,omitempty"`
 		Category           string          `db:"category" json:"category"`
 		UserId             uint            `db:"user_id" json:"-"`
 		Amount             decimal.Decimal `db:"amount" json:"amount"`
@@ -53,5 +53,14 @@ type (
 	GetAssetByIdRequest struct {
 		UserId uint
 		Id     uint `param:"id"`
+	}
+
+	UpdateAssetRequest struct {
+		GetAssetByIdRequest
+		Name          string          `json:"name" validate:"required,min=1,max=100"`
+		CategoryId    uint            `json:"category_id" validate:"required"`
+		Amount        decimal.Decimal `json:"amount" validate:"required,decimal_gt_zero"`
+		PurchasePrice decimal.Decimal `json:"purchase_price" validate:"required,decimal_gt_zero"`
+		Status        string          `json:"status" validate:"required,oneof=active inactive sold"`
 	}
 )

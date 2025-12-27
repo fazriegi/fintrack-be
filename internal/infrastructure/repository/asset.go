@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/doug-martin/goqu/v9"
+	"github.com/doug-martin/goqu/v9/exp"
 	"github.com/fazriegi/fintrack-be/internal/entity"
 	"github.com/fazriegi/fintrack-be/internal/pkg"
 	"github.com/jmoiron/sqlx"
@@ -15,7 +16,8 @@ type AssetRepository interface {
 	ListAssetCategory(userId uint, db *sqlx.DB) ([]entity.AssetCategory, error)
 	ListAsset(param entity.ListAssetRequest, db *sqlx.DB) ([]entity.AssetResponse, uint, error)
 	Insert(data entity.Asset, tx *sqlx.Tx) error
-	GetById(id, userId uint, db *sqlx.DB) (result entity.AssetResponse, err error)
+	GetById(id, userId uint, forUpdate bool, db *sqlx.DB, tx *sqlx.Tx) (result entity.AssetResponse, err error)
+	Update(data entity.Asset, id, userId uint, tx *sqlx.Tx) error
 }
 
 type assetRepo struct {
@@ -157,7 +159,7 @@ func (r *assetRepo) Insert(data entity.Asset, tx *sqlx.Tx) error {
 	return nil
 }
 
-func (r *assetRepo) GetById(id, userId uint, db *sqlx.DB) (result entity.AssetResponse, err error) {
+func (r *assetRepo) GetById(id, userId uint, forUpdate bool, db *sqlx.DB, tx *sqlx.Tx) (result entity.AssetResponse, err error) {
 	dialect := pkg.GetDialect()
 
 	dataset := dialect.From(goqu.T("assets").As("a")).
@@ -168,6 +170,7 @@ func (r *assetRepo) GetById(id, userId uint, db *sqlx.DB) (result entity.AssetRe
 		Select(
 			goqu.I("a.id"),
 			goqu.I("a.name"),
+			goqu.I("a.category_id"),
 			goqu.I("b.name").As("category"),
 			goqu.I("a.amount"),
 			goqu.I("a.purchase_price"),
@@ -179,15 +182,50 @@ func (r *assetRepo) GetById(id, userId uint, db *sqlx.DB) (result entity.AssetRe
 			goqu.I("a.id").Eq(id),
 		)
 
+	if tx != nil && forUpdate {
+		dataset = dataset.ForUpdate(exp.Wait)
+	}
+
 	query, val, err := dataset.ToSQL()
 	if err != nil {
 		return result, fmt.Errorf("failed to build SQL query: %w", err)
 	}
 
-	err = db.Get(&result, query, val...)
-	if err != nil {
-		return result, err
+	if tx != nil && forUpdate {
+		err = tx.Get(&result, query, val...)
+		if err != nil {
+			return result, err
+		}
+	} else {
+		err = db.Get(&result, query, val...)
+		if err != nil {
+			return result, err
+		}
 	}
 
 	return
+}
+
+func (r *assetRepo) Update(data entity.Asset, id, userId uint, tx *sqlx.Tx) error {
+	dialect := pkg.GetDialect()
+
+	dataset := dialect.
+		Update("assets").
+		Set(data).
+		Where(
+			goqu.I("user_id").Eq(userId),
+			goqu.I("id").Eq(id),
+		)
+
+	sql, val, err := dataset.ToSQL()
+	if err != nil {
+		return fmt.Errorf("failed to build SQL query: %w", err)
+	}
+
+	_, err = tx.Exec(sql, val...)
+	if err != nil {
+		return fmt.Errorf("failed to execute insert: %w", err)
+	}
+
+	return nil
 }
