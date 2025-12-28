@@ -3,6 +3,7 @@ package pkg
 import (
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
@@ -24,9 +25,10 @@ func CheckPasswordHash(password, hash string) bool {
 	return err == nil
 }
 
-func Hash(data string) string {
-	hash := sha256.Sum256([]byte(data))
-	return hex.EncodeToString(hash[:])
+func Hash(data, secret string) string {
+	h := hmac.New(sha256.New, []byte(secret))
+	h.Write([]byte(data))
+	return hex.EncodeToString(h.Sum(nil))
 }
 
 func deriveKey(keyStr string) []byte {

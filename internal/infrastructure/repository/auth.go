@@ -2,6 +2,7 @@ package repository
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/doug-martin/goqu/v9"
 	"github.com/fazriegi/fintrack-be/internal/entity"
@@ -11,9 +12,8 @@ import (
 
 type AuthRepository interface {
 	InsertRefreshToken(data entity.RefreshToken, db *sqlx.Tx) (result uint, err error)
-	GetRefreshToken(token string, userId uint, db *sqlx.DB) (result entity.RefreshToken, err error)
-	DeleteRefreshTokenById(id uint, tx *sqlx.Tx) error
-	DeleteRefreshTokenByToken(token string, tx *sqlx.Tx) error
+	GetValidRefreshToken(token string, userId uint, db *sqlx.DB) (result entity.RefreshToken, err error)
+	DeleteRefreshTokenByUserId(userId uint, tx *sqlx.Tx) error
 	InitUserAssetCategories(userId uint, tx *sqlx.Tx) error
 }
 
@@ -46,7 +46,7 @@ func (r *authRepo) InsertRefreshToken(data entity.RefreshToken, tx *sqlx.Tx) (re
 	return uint(id), nil
 }
 
-func (r *authRepo) GetRefreshToken(token string, userId uint, db *sqlx.DB) (result entity.RefreshToken, err error) {
+func (r *authRepo) GetValidRefreshToken(token string, userId uint, db *sqlx.DB) (result entity.RefreshToken, err error) {
 	dialect := pkg.GetDialect()
 
 	dataset := dialect.From("refresh_tokens").
@@ -59,6 +59,7 @@ func (r *authRepo) GetRefreshToken(token string, userId uint, db *sqlx.DB) (resu
 		Where(
 			goqu.I("token").Eq(token),
 			goqu.I("user_id").Eq(userId),
+			goqu.I("expired_at").Gt(time.Now()),
 		)
 
 	query, val, err := dataset.ToSQL()
@@ -74,27 +75,10 @@ func (r *authRepo) GetRefreshToken(token string, userId uint, db *sqlx.DB) (resu
 	return
 }
 
-func (r *authRepo) DeleteRefreshTokenById(id uint, tx *sqlx.Tx) error {
+func (r *authRepo) DeleteRefreshTokenByUserId(userId uint, tx *sqlx.Tx) error {
 	dialect := pkg.GetDialect()
 
-	dataset := dialect.Delete("refresh_tokens").Where(goqu.I("id").Eq(id))
-	sql, val, err := dataset.ToSQL()
-	if err != nil {
-		return fmt.Errorf("failed to build SQL query: %w", err)
-	}
-
-	_, err = tx.Exec(sql, val...)
-	if err != nil {
-		return fmt.Errorf("failed to execute insert: %w", err)
-	}
-
-	return nil
-}
-
-func (r *authRepo) DeleteRefreshTokenByToken(token string, tx *sqlx.Tx) error {
-	dialect := pkg.GetDialect()
-
-	dataset := dialect.Delete("refresh_tokens").Where(goqu.I("token").Eq(token))
+	dataset := dialect.Delete("refresh_tokens").Where(goqu.I("user_id").Eq(userId))
 	sql, val, err := dataset.ToSQL()
 	if err != nil {
 		return fmt.Errorf("failed to build SQL query: %w", err)

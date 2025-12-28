@@ -130,6 +130,8 @@ func (u *authUsecase) Login(props *entity.LoginRequest) (resp pkg.Response) {
 		return pkg.NewResponse(http.StatusInternalServerError, pkg.ErrServer.Error(), nil, nil)
 	}
 
+	hashedRefreshToken := pkg.Hash(refreshToken, config.GetString("JWT_SECRET"))
+
 	tx, err := db.Beginx()
 	if err != nil {
 		u.log.Errorf("error start transaction: %s", err.Error())
@@ -137,9 +139,15 @@ func (u *authUsecase) Login(props *entity.LoginRequest) (resp pkg.Response) {
 	}
 	defer tx.Rollback()
 
+	err = u.authRepo.DeleteRefreshTokenByUserId(existingUser.ID, tx)
+	if err != nil {
+		u.log.Errorf("authRepo.DeleteRefreshTokenByUserId: %s", err.Error())
+		return pkg.NewResponse(http.StatusUnauthorized, pkg.ErrNotAuthorized.Error(), nil, nil)
+	}
+
 	refreshTokenData := entity.RefreshToken{
 		UserId:    existingUser.ID,
-		Token:     pkg.Hash(refreshToken),
+		Token:     hashedRefreshToken,
 		ExpiredAt: time.Now().Add(time.Duration(config.GetUint("JWT_REFRESH_EXP_DAY")) * 24 * time.Hour),
 	}
 
@@ -183,11 +191,11 @@ func (u *authUsecase) RefreshToken(refreshToken string) (resp pkg.Response) {
 		return pkg.NewResponse(http.StatusUnauthorized, pkg.ErrNotAuthorized.Error(), nil, nil)
 	}
 
-	tokenHashed := pkg.Hash(refreshToken)
+	tokenHashed := pkg.Hash(refreshToken, config.GetString("JWT_SECRET"))
 
-	existingToken, err := u.authRepo.GetRefreshToken(tokenHashed, userID, db)
-	if err != nil {
-		u.log.Errorf("u.authRepo.GetRefreshToken: %s", err.Error())
+	existingToken, err := u.authRepo.GetValidRefreshToken(tokenHashed, userID, db)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		u.log.Errorf("u.authRepo.GetValidRefreshToken: %s", err.Error())
 		return pkg.NewResponse(http.StatusUnauthorized, pkg.ErrNotAuthorized.Error(), nil, nil)
 	}
 
@@ -197,40 +205,46 @@ func (u *authUsecase) RefreshToken(refreshToken string) (resp pkg.Response) {
 		return pkg.NewResponse(http.StatusUnauthorized, pkg.ErrNotAuthorized.Error(), nil, nil)
 	}
 
-	newRefreshToken, err := u.jwt.GenerateRefreshToken(userID)
-	if err != nil {
-		u.log.Errorf("u.jwt.GenerateRefreshToken: %s", err.Error())
-		return pkg.NewResponse(http.StatusUnauthorized, pkg.ErrNotAuthorized.Error(), nil, nil)
-	}
+	newRefreshToken := refreshToken
 
-	tx, err := db.Beginx()
-	if err != nil {
-		u.log.Errorf("error start transaction: %s", err.Error())
-		return pkg.NewResponse(http.StatusUnauthorized, pkg.ErrNotAuthorized.Error(), nil, nil)
-	}
-	defer tx.Rollback()
+	if existingToken.ID == 0 {
+		newRefreshToken, err = u.jwt.GenerateRefreshToken(userID)
+		if err != nil {
+			u.log.Errorf("u.jwt.GenerateRefreshToken: %s", err.Error())
+			return pkg.NewResponse(http.StatusUnauthorized, pkg.ErrNotAuthorized.Error(), nil, nil)
+		}
 
-	err = u.authRepo.DeleteRefreshTokenById(existingToken.ID, tx)
-	if err != nil {
-		u.log.Errorf("authRepo.DeleteRefreshTokenById: %s", err.Error())
-		return pkg.NewResponse(http.StatusUnauthorized, pkg.ErrNotAuthorized.Error(), nil, nil)
-	}
+		hasheNewdRefreshToken := pkg.Hash(newRefreshToken, config.GetString("JWT_SECRET"))
 
-	refreshTokenData := entity.RefreshToken{
-		UserId:    existingUser.ID,
-		Token:     pkg.Hash(newRefreshToken),
-		ExpiredAt: time.Now().Add(time.Duration(config.GetUint("JWT_REFRESH_EXP_DAY")) * 24 * time.Hour),
-	}
+		tx, err := db.Beginx()
+		if err != nil {
+			u.log.Errorf("error start transaction: %s", err.Error())
+			return pkg.NewResponse(http.StatusUnauthorized, pkg.ErrNotAuthorized.Error(), nil, nil)
+		}
+		defer tx.Rollback()
 
-	_, err = u.authRepo.InsertRefreshToken(refreshTokenData, tx)
-	if err != nil {
-		u.log.Errorf("authRepo.InsertRefreshToken: %s", err.Error())
-		return pkg.NewResponse(http.StatusUnauthorized, pkg.ErrNotAuthorized.Error(), nil, nil)
-	}
+		err = u.authRepo.DeleteRefreshTokenByUserId(existingUser.ID, tx)
+		if err != nil {
+			u.log.Errorf("authRepo.DeleteRefreshTokenByUserId: %s", err.Error())
+			return pkg.NewResponse(http.StatusUnauthorized, pkg.ErrNotAuthorized.Error(), nil, nil)
+		}
 
-	if err := tx.Commit(); err != nil {
-		u.log.Errorf("failed commit tx: %s", err.Error())
-		return pkg.NewResponse(http.StatusUnauthorized, pkg.ErrNotAuthorized.Error(), nil, nil)
+		refreshTokenData := entity.RefreshToken{
+			UserId:    existingUser.ID,
+			Token:     hasheNewdRefreshToken,
+			ExpiredAt: time.Now().Add(time.Duration(config.GetUint("JWT_REFRESH_EXP_DAY")) * 24 * time.Hour),
+		}
+
+		_, err = u.authRepo.InsertRefreshToken(refreshTokenData, tx)
+		if err != nil {
+			u.log.Errorf("authRepo.InsertRefreshToken: %s", err.Error())
+			return pkg.NewResponse(http.StatusUnauthorized, pkg.ErrNotAuthorized.Error(), nil, nil)
+		}
+
+		if err := tx.Commit(); err != nil {
+			u.log.Errorf("failed commit tx: %s", err.Error())
+			return pkg.NewResponse(http.StatusUnauthorized, pkg.ErrNotAuthorized.Error(), nil, nil)
+		}
 	}
 
 	data := map[string]any{
@@ -243,26 +257,32 @@ func (u *authUsecase) RefreshToken(refreshToken string) (resp pkg.Response) {
 
 func (u *authUsecase) Logout(refreshToken string) (resp pkg.Response) {
 	db := database.Get()
+	resp = pkg.NewResponse(http.StatusOK, "success", nil, nil)
 
-	tokenHashed := pkg.Hash(refreshToken)
+	claims, err := u.jwt.VerifyToken(refreshToken, "refresh")
+	if err != nil {
+		return
+	}
+
+	userID := uint(claims["id"].(float64))
 
 	tx, err := db.Beginx()
 	if err != nil {
 		u.log.Errorf("error start transaction: %s", err.Error())
-		return pkg.NewResponse(http.StatusUnauthorized, pkg.ErrNotAuthorized.Error(), nil, nil)
+		return
 	}
 	defer tx.Rollback()
 
-	err = u.authRepo.DeleteRefreshTokenByToken(tokenHashed, tx)
+	err = u.authRepo.DeleteRefreshTokenByUserId(userID, tx)
 	if err != nil {
-		u.log.Errorf("authRepo.DeleteRefreshTokenById: %s", err.Error())
-		return pkg.NewResponse(http.StatusUnauthorized, pkg.ErrNotAuthorized.Error(), nil, nil)
+		u.log.Errorf("authRepo.DeleteRefreshTokenByUserId: %s", err.Error())
+		return
 	}
 
 	if err := tx.Commit(); err != nil {
 		u.log.Errorf("failed commit tx: %s", err.Error())
-		return pkg.NewResponse(http.StatusUnauthorized, pkg.ErrNotAuthorized.Error(), nil, nil)
+		return
 	}
 
-	return pkg.NewResponse(http.StatusOK, "success", nil, nil)
+	return
 }
