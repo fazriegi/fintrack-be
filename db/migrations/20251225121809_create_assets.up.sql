@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS assets (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+    id CHAR(36) PRIMARY KEY,
     user_id INT NOT NULL,
     name VARCHAR(100) NOT NULL,
     category_id INT NOT NULL,
@@ -16,7 +16,7 @@ CREATE INDEX idx_assets_name ON assets(name);
 CREATE INDEX idx_assets_status ON assets(status);
 
 CREATE TABLE IF NOT EXISTS asset_histories (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+    id CHAR(36) PRIMARY KEY,
     user_id INT NOT NULL,
     name VARCHAR(100) NOT NULL,
     category_id INT NOT NULL,

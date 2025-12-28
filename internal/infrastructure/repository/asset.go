@@ -16,9 +16,9 @@ type AssetRepository interface {
 	ListAssetCategory(userId uint, db *sqlx.DB) ([]entity.AssetCategory, error)
 	ListAsset(param entity.ListAssetRequest, db *sqlx.DB) ([]entity.AssetResponse, uint, error)
 	Insert(data entity.Asset, tx *sqlx.Tx) error
-	GetById(id, userId uint, forUpdate bool, db *sqlx.DB, tx *sqlx.Tx) (result entity.AssetResponse, err error)
-	Update(data entity.Asset, id, userId uint, tx *sqlx.Tx) error
-	Delete(id, userId uint, tx *sqlx.Tx) error
+	GetById(id string, userId uint, forUpdate bool, db *sqlx.DB, tx *sqlx.Tx) (result entity.AssetResponse, err error)
+	Update(data entity.Asset, tx *sqlx.Tx) error
+	Delete(id string, userId uint, tx *sqlx.Tx) error
 }
 
 type assetRepo struct {
@@ -160,7 +160,7 @@ func (r *assetRepo) Insert(data entity.Asset, tx *sqlx.Tx) error {
 	return nil
 }
 
-func (r *assetRepo) GetById(id, userId uint, forUpdate bool, db *sqlx.DB, tx *sqlx.Tx) (result entity.AssetResponse, err error) {
+func (r *assetRepo) GetById(id string, userId uint, forUpdate bool, db *sqlx.DB, tx *sqlx.Tx) (result entity.AssetResponse, err error) {
 	dialect := pkg.GetDialect()
 
 	dataset := dialect.From(goqu.T("assets").As("a")).
@@ -207,15 +207,15 @@ func (r *assetRepo) GetById(id, userId uint, forUpdate bool, db *sqlx.DB, tx *sq
 	return
 }
 
-func (r *assetRepo) Update(data entity.Asset, id, userId uint, tx *sqlx.Tx) error {
+func (r *assetRepo) Update(data entity.Asset, tx *sqlx.Tx) error {
 	dialect := pkg.GetDialect()
 
 	dataset := dialect.
 		Update("assets").
 		Set(data).
 		Where(
-			goqu.I("user_id").Eq(userId),
-			goqu.I("id").Eq(id),
+			goqu.I("user_id").Eq(data.UserId),
+			goqu.I("id").Eq(data.Id),
 		)
 
 	sql, val, err := dataset.ToSQL()
@@ -231,7 +231,7 @@ func (r *assetRepo) Update(data entity.Asset, id, userId uint, tx *sqlx.Tx) erro
 	return nil
 }
 
-func (r *assetRepo) Delete(id, userId uint, tx *sqlx.Tx) error {
+func (r *assetRepo) Delete(id string, userId uint, tx *sqlx.Tx) error {
 	dialect := pkg.GetDialect()
 
 	dataset := dialect.

@@ -12,7 +12,7 @@ type (
 	}
 
 	Asset struct {
-		Id            uint            `db:"id" json:"id"`
+		Id            string          `db:"id" json:"id"`
 		Name          string          `db:"name" json:"name"`
 		CategoryId    uint            `db:"category_id" json:"-"`
 		UserId        uint            `db:"user_id" json:"-"`
@@ -22,7 +22,7 @@ type (
 	}
 
 	AssetResponse struct {
-		Id                 uint            `db:"id" json:"id"`
+		Id                 string          `db:"id" json:"id"`
 		Name               string          `db:"name" json:"name"`
 		CategoryId         uint            `db:"category_id" json:"category_id,omitempty"`
 		Category           string          `db:"category" json:"category"`
@@ -52,7 +52,7 @@ type (
 
 	GetAssetByIdRequest struct {
 		UserId uint
-		Id     uint `param:"id"`
+		Id     string `param:"id"`
 	}
 
 	UpdateAssetRequest struct {

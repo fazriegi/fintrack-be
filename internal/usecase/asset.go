@@ -11,6 +11,7 @@ import (
 	"github.com/fazriegi/fintrack-be/internal/infrastructure/logger"
 	"github.com/fazriegi/fintrack-be/internal/infrastructure/repository"
 	"github.com/fazriegi/fintrack-be/internal/pkg"
+	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 )
 
@@ -106,6 +107,7 @@ func (u *assetUsecase) SubmitAsset(param entity.SubmitAssetRequest) (resp pkg.Re
 	defer tx.Rollback()
 
 	dataInsert := entity.Asset{
+		Id:            uuid.NewString(),
 		Name:          param.Name,
 		CategoryId:    param.CategoryId,
 		UserId:        param.UserId,
@@ -180,7 +182,7 @@ func (u *assetUsecase) Update(param entity.UpdateAssetRequest) (resp pkg.Respons
 		Status:        param.Status,
 	}
 
-	err = u.assetRepo.Update(dataUpdate, param.Id, param.UserId, tx)
+	err = u.assetRepo.Update(dataUpdate, tx)
 	if err != nil {
 		u.log.Errorf("assetRepo.Update: %s", err.Error())
 		return pkg.NewResponse(http.StatusInternalServerError, pkg.ErrServer.Error(), nil, nil)
