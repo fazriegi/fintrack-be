@@ -8,7 +8,7 @@ var (
 	ErrNotAuthorized   = "you're not authorized"
 	ErrNotFound        = "data not found"
 	ErrInvalidJson     = "invalid JSON format"
-	ErrInvalidToken    = "Invalid or expired token"
+	ErrInvalidToken    = "invalid or expired token"
 
 	ErrUserNotFound = "User not found"
 	ErrEmailExists  = "Email already exists"
