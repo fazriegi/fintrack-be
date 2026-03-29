@@ -134,6 +134,7 @@ func (uc *userUsecase) Login(ctx context.Context, req *domain.LoginRequest) (res
 	return pkg.NewResponse(http.StatusOK, "Login successful", map[string]any{
 		"access_token":  accessToken,
 		"refresh_token": refreshToken,
+		"user":          user,
 	}, nil)
 }
 
