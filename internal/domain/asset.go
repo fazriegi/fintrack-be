@@ -20,3 +20,7 @@ type ListAssetRequest struct {
 	UserId uuid.UUID
 	Search string `query:"search"`
 }
+
+type ListAssetCategoryResponse struct {
+	Categories *[]Category `json:"categories"`
+}

@@ -6,6 +6,7 @@ import (
 
 	"github.com/fazriegi/fintrack-be/internal/domain"
 	"github.com/fazriegi/fintrack-be/pkg"
+	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -13,6 +14,7 @@ type assetRepository struct{}
 
 type AssetRepository interface {
 	ListAsset(ctx context.Context, req *domain.ListAssetRequest, db *sqlx.DB) (*[]domain.Asset, error)
+	ListCategory(ctx context.Context, userId uuid.UUID, db *sqlx.DB) (*[]domain.Category, error)
 }
 
 func NewAssetRepository() AssetRepository {
@@ -50,4 +52,12 @@ func (r *assetRepository) ListAsset(ctx context.Context, req *domain.ListAssetRe
 	}
 
 	return &assets, nil
+}
+
+func (r *assetRepository) ListCategory(ctx context.Context, userId uuid.UUID, db *sqlx.DB) (*[]domain.Category, error) {
+	var categories []domain.Category
+	query := `SELECT id, name, base_type FROM asset_categories WHERE user_id = $1 ORDER BY name ASC`
+	err := db.SelectContext(ctx, &categories, query, userId)
+
+	return &categories, err
 }

@@ -22,6 +22,7 @@ func NewAssetHandler(mux *http.ServeMux, uc usecase.AssetUsecase, logger *log.Lo
 	}
 
 	mux.Handle("GET /v1/assets", middleware.MiddlewareAuth(http.HandlerFunc(handler.ListAsset)))
+	mux.Handle("GET /v1/assets/categories", middleware.MiddlewareAuth(http.HandlerFunc(handler.ListAssetCategory)))
 }
 
 func (h *AssetHandler) ListAsset(w http.ResponseWriter, r *http.Request) {
@@ -34,5 +35,10 @@ func (h *AssetHandler) ListAsset(w http.ResponseWriter, r *http.Request) {
 
 	response := h.usecase.ListAsset(r.Context(), &req)
 
+	response.HTTP(w)
+}
+
+func (h *AssetHandler) ListAssetCategory(w http.ResponseWriter, r *http.Request) {
+	response := h.usecase.ListAssetCategory(r.Context())
 	response.HTTP(w)
 }

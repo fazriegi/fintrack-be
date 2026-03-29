@@ -21,6 +21,7 @@ type assetUsecase struct {
 
 type AssetUsecase interface {
 	ListAsset(ctx context.Context, req *domain.ListAssetRequest) (resp pkg.Response)
+	ListAssetCategory(ctx context.Context) (resp pkg.Response)
 }
 
 func NewAssetUsecase(db *sqlx.DB, log *log.Logger, repo repository.AssetRepository) AssetUsecase {
@@ -38,4 +39,16 @@ func (u *assetUsecase) ListAsset(ctx context.Context, req *domain.ListAssetReque
 	}
 
 	return pkg.NewResponse(http.StatusOK, "Success", assets, nil)
+}
+
+func (u *assetUsecase) ListAssetCategory(ctx context.Context) (resp pkg.Response) {
+	userId := ctx.Value("user_id").(uuid.UUID)
+
+	categories, err := u.repo.ListCategory(ctx, userId, u.db)
+	if err != nil {
+		u.log.Printf("[ERROR] repo.ListAsset: %s", err.Error())
+		return pkg.NewResponse(http.StatusInternalServerError, constant.ErrServer, nil, nil)
+	}
+
+	return pkg.NewResponse(http.StatusOK, "Success", categories, nil)
 }
