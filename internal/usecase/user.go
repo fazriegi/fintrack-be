@@ -2,7 +2,6 @@ package usecase
 
 import (
 	"context"
-	"errors"
 	"log"
 	"net/http"
 	"time"
@@ -37,8 +36,7 @@ func NewUserUsecase(db *sqlx.DB, log *log.Logger, repo repository.UserRepository
 
 func (uc *userUsecase) Register(ctx context.Context, req *domain.RegisterRequest) pkg.Response {
 	existingUser, err := uc.repo.GetByEmail(ctx, req.Email, uc.db)
-
-	if err != nil && err != errors.New(constant.ErrUserNotFound) {
+	if err != nil && err.Error() != constant.ErrUserNotFound {
 		uc.log.Printf("[ERROR] repo.GetByEmail: %s", err.Error())
 		return pkg.NewResponse(http.StatusInternalServerError, constant.ErrServer, nil, nil)
 	}
