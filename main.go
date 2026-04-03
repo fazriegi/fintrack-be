@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/fazriegi/fintrack-be/internal/cron"
 	"github.com/fazriegi/fintrack-be/internal/delivery/http/handler"
 	"github.com/fazriegi/fintrack-be/pkg/database"
 	"github.com/fazriegi/fintrack-be/pkg/logger"
@@ -34,6 +35,10 @@ func main() {
 
 	db := database.ConnectPostgres(appLogger)
 	defer db.Close()
+
+	go func() {
+		cron.RefreshTokenCleanup(db, appLogger)
+	}()
 
 	port := os.Getenv("PORT")
 	if port == "" {

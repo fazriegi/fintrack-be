@@ -23,6 +23,7 @@ type UserRepository interface {
 	InsertRefreshToken(ctx context.Context, data domain.RefreshToken, tx *sqlx.Tx) error
 	SeedDefaultCategories(ctx context.Context, tx *sqlx.Tx, userID uuid.UUID) error
 	RevokeRefreshToken(ctx context.Context, userID uuid.UUID, refreshToken string, tx *sqlx.Tx) error
+	RemoveExpiredToken(ctx context.Context, userID *uuid.UUID, db *sqlx.DB) error
 }
 
 func NewUserRepository() UserRepository {
@@ -80,7 +81,6 @@ func (r *userRepo) CheckRefreshToken(ctx context.Context, userId uuid.UUID, refr
 	return exp, nil
 }
 
-// Ganti nama function jadi Store/Save/Create, karena kita nambah sesi baru
 func (r *userRepo) InsertRefreshToken(ctx context.Context, data domain.RefreshToken, tx *sqlx.Tx) error {
 	query := `
 		INSERT INTO refresh_tokens (user_id, token, expires_at, device_info, ip_address) 
@@ -114,6 +114,26 @@ func (r *userRepo) RevokeRefreshToken(ctx context.Context, userID uuid.UUID, ref
 	}
 
 	return nil
+}
+
+func (r *userRepo) RemoveExpiredToken(ctx context.Context, userID *uuid.UUID, db *sqlx.DB) error {
+	query := `
+		DELETE FROM refresh_tokens
+		WHERE expires_at < now()
+	`
+
+	if userID != nil {
+		query += ` AND user_id = $1`
+	}
+
+	param := []interface{}{}
+	if userID != nil {
+		param = append(param, *userID)
+	}
+
+	_, err := db.ExecContext(ctx, query, param...)
+
+	return err
 }
 
 func (r *userRepo) SeedDefaultCategories(ctx context.Context, tx *sqlx.Tx, userID uuid.UUID) error {
