@@ -9,6 +9,7 @@ var (
 	ErrNotFound        = "data not found"
 	ErrInvalidJson     = "invalid JSON format"
 	ErrInvalidToken    = "invalid or expired token"
+	ErrInvalidParam    = "invalid param"
 
 	ErrUserNotFound = "User not found"
 	ErrEmailExists  = "Email already exists"

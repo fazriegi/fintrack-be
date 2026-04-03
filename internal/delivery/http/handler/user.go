@@ -98,6 +98,8 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	req.RemoteAddr = r.RemoteAddr
+
 	response := h.usecase.Login(r.Context(), &req)
 	if response.Data != nil {
 		data, ok := response.Data.(map[string]any)

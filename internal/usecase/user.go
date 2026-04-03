@@ -118,7 +118,7 @@ func (uc *userUsecase) Login(ctx context.Context, req *domain.LoginRequest) (res
 		Token:      refreshToken,
 		ExpiresAt:  time.Now().Add(7 * 24 * time.Hour),
 		DeviceInfo: "",
-		IPAddress:  "",
+		IPAddress:  req.RemoteAddr,
 	}, tx); err != nil {
 		uc.log.Printf("[ERROR] repo.InsertRefreshToken: %s", err.Error())
 		return pkg.NewResponse(http.StatusInternalServerError, constant.ErrServer, nil, nil)
@@ -173,19 +173,9 @@ func (uc *userUsecase) RefreshToken(ctx context.Context, refreshToken string) (r
 }
 
 func (uc *userUsecase) Profile(ctx context.Context, accessToken string) (resp pkg.Response) {
-	claims, err := token.ValidateToken(accessToken)
-	if err != nil {
-		uc.log.Printf("[ERROR] token.ValidateToken: %s", err.Error())
-		return pkg.NewResponse(http.StatusUnauthorized, constant.ErrInvalidToken, nil, nil)
-	}
+	userId := ctx.Value("user_id").(uuid.UUID)
 
-	parsedUserID, err := uuid.Parse(claims.UserID)
-	if err != nil {
-		uc.log.Printf("[ERROR] uuid.Parse - invalid UUID format in claims: %s", err.Error())
-		return pkg.NewResponse(http.StatusUnauthorized, constant.ErrInvalidToken, nil, nil)
-	}
-
-	user, err := uc.repo.GetByID(ctx, parsedUserID, uc.db)
+	user, err := uc.repo.GetByID(ctx, userId, uc.db)
 	if err != nil {
 		if err.Error() != constant.ErrUserNotFound {
 			uc.log.Printf("[ERROR] repo.GetByID: %s", err.Error())
