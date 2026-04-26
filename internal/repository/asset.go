@@ -22,6 +22,7 @@ type AssetRepository interface {
 	GetByID(ctx context.Context, id, userId uuid.UUID, db *sqlx.DB) (*domain.Asset, error)
 	Delete(ctx context.Context, id, userId uuid.UUID, db *sqlx.DB) error
 	Insert(ctx context.Context, data *domain.AssetDB, db *sqlx.DB) error
+	Update(ctx context.Context, data *domain.AssetDB, db *sqlx.DB) error
 }
 
 func NewAssetRepository() AssetRepository {
@@ -153,6 +154,13 @@ func (r *assetRepository) Delete(ctx context.Context, id, userId uuid.UUID, db *
 
 func (r *assetRepository) Insert(ctx context.Context, data *domain.AssetDB, db *sqlx.DB) error {
 	query := `INSERT INTO assets (user_id, category_id, name, current_value, details, is_active) VALUES (:user_id, :category_id, :name, :current_value, :details, :is_active)`
+	_, err := db.NamedExecContext(ctx, query, data)
+
+	return err
+}
+
+func (r *assetRepository) Update(ctx context.Context, data *domain.AssetDB, db *sqlx.DB) error {
+	query := `UPDATE assets SET name = :name, category_id = :category_id, current_value = :current_value, details = :details, is_active = :is_active WHERE id = :id AND user_id = :user_id`
 	_, err := db.NamedExecContext(ctx, query, data)
 
 	return err

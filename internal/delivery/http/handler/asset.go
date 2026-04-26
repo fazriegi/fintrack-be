@@ -28,6 +28,7 @@ func NewAssetHandler(mux *http.ServeMux, uc usecase.AssetUsecase, logger *log.Lo
 	mux.Handle("GET /v1/assets", middleware.MiddlewareAuth(http.HandlerFunc(handler.ListAsset)))
 	mux.Handle("GET /v1/assets/categories", middleware.MiddlewareAuth(http.HandlerFunc(handler.ListAssetCategory)))
 	mux.Handle("GET /v1/assets/{id}", middleware.MiddlewareAuth(http.HandlerFunc(handler.GetByID)))
+	mux.Handle("PUT /v1/assets/{id}", middleware.MiddlewareAuth(http.HandlerFunc(handler.Update)))
 	mux.Handle("DELETE /v1/assets/{id}", middleware.MiddlewareAuth(http.HandlerFunc(handler.Delete)))
 	mux.Handle("POST /v1/assets", middleware.MiddlewareAuth(http.HandlerFunc(handler.Create)))
 }
@@ -98,4 +99,37 @@ func (h *AssetHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	response := h.usecase.Create(r.Context(), &req)
 	response.HTTP(w)
+}
+
+func (h *AssetHandler) Update(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+
+	parsedID, err := uuid.Parse(id)
+	if err != nil {
+		h.logger.Printf("[ERROR] uuid.Parse - invalid UUID format: %s", err.Error())
+		pkg.NewResponse(http.StatusBadRequest, constant.ErrInvalidParam, nil, nil).HTTP(w)
+		return
+	}
+
+	var req domain.UpdateAsset
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		pkg.NewResponse(http.StatusBadRequest, constant.ErrInvalidJson, nil, nil).HTTP(w)
+		return
+	}
+
+	// validation
+	validationErr := validator.ValidateRequest(&req)
+	if len(validationErr) > 0 {
+		errResponse := map[string]any{
+			"errors": validationErr,
+		}
+
+		pkg.NewResponse(http.StatusUnprocessableEntity, constant.ErrValidation, errResponse, nil).HTTP(w)
+		return
+	}
+
+	req.ID = parsedID
+
+	h.usecase.Update(r.Context(), &req).HTTP(w)
 }

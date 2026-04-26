@@ -65,8 +65,19 @@ type GetAssetByIDResponse struct {
 
 type CreateAsset struct {
 	UserId       uuid.UUID
-	Name         string          `json:"name" validate:"required"`
-	CategoryID   uuid.UUID       `json:"category_id" validate:"required"`
+	Name         string           `json:"name" validate:"required"`
+	CategoryID   uuid.UUID        `json:"category_id" validate:"required"`
+	CurrentValue *decimal.Decimal `json:"current_value" validate:"required"`
+	Details      any              `json:"details" validate:"required"`
+	IsActive     *bool            `json:"is_active" validate:"required"`
+	CategoryType string           `json:"category_type" validate:"required"`
+}
+
+type UpdateAsset struct {
+	UserId       uuid.UUID
+	ID           uuid.UUID
+	Name         string           `json:"name" validate:"required"`
+	CategoryID   uuid.UUID        `json:"category_id" validate:"required"`
 	CurrentValue *decimal.Decimal `json:"current_value" validate:"required"`
 	Details      any              `json:"details" validate:"required"`
 	IsActive     *bool            `json:"is_active" validate:"required"`
