@@ -22,10 +22,15 @@ func New(db *sqlx.DB, logger *log.Logger) http.Handler {
 	assetRepo := repository.NewAssetRepository()
 	assetUC := usecase.NewAssetUsecase(db, logger, assetRepo)
 
+	// LIABILITY
+	liabilityRepo := repository.NewLiabilityRepository()
+	liabilityUC := usecase.NewLiabilityUsecase(db, logger, liabilityRepo)
+
 	mux := http.NewServeMux()
 
 	NewUserHandler(mux, authUC, logger)
 	NewAssetHandler(mux, assetUC, logger)
+	NewLiabilityHandler(mux, liabilityUC, logger)
 
 	origin := os.Getenv("ALLOWED_ORIGIN")
 	if origin == "" {
