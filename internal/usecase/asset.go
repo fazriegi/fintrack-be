@@ -89,7 +89,7 @@ func (u *assetUsecase) ListAssetCategory(ctx context.Context) (resp pkg.Response
 
 	categories, err := u.repo.ListCategory(ctx, userId, u.db)
 	if err != nil {
-		u.log.Printf("[ERROR] repo.ListAsset: %s", err.Error())
+		u.log.Printf("[ERROR] repo.ListCategory: %s", err.Error())
 		return pkg.NewResponse(http.StatusInternalServerError, constant.ErrServer, nil, nil)
 	}
 
