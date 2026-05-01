@@ -1,6 +1,8 @@
 package domain
 
 import (
+	"time"
+
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 )
@@ -30,4 +32,19 @@ type PhysicalAsset struct {
 	Model         string          `json:"model"`
 	PurchaseYear  int             `json:"purchase_year"`
 	PurchasePrice decimal.Decimal `json:"purchase_price"`
+}
+
+type ShortTermLiability struct {
+	CreditLimit   decimal.Decimal `json:"credit_limit"`
+	StatementDate int             `json:"statement_date" validate:"required,number,lte=31,gte=1"`
+	DueDate       int             `json:"due_date" validate:"required,number,lte=31,gte=1"`
+	InterestRate  decimal.Decimal `json:"interest_rate"`
+}
+
+type LongTermLiability struct {
+	MonthlyInstallment decimal.Decimal `json:"monthly_installment" validate:"required"`
+	Tenor              int             `json:"tenor" validate:"required"`
+	DueDate            int             `json:"due_date" validate:"required,number,lte=31,gte=1"`
+	InterestRatePA     decimal.Decimal `json:"interest_rate_pa" `
+	StartDate          time.Time       `json:"start_date" validate:"required"`
 }
