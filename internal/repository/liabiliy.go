@@ -140,8 +140,6 @@ func (r *liabilityRepository) Insert(ctx context.Context, data *domain.Liability
 func (r *liabilityRepository) Update(ctx context.Context, data *domain.LiabilityDB, db *sqlx.DB) error {
 	query := `UPDATE liabilities SET name = :name, category_id = :category_id, principal_amount = :principal_amount, remaining_balance = :remaining_balance, details = :details, updated_at = now() WHERE id = :id AND user_id = :user_id`
 	_, err := db.NamedExecContext(ctx, query, data)
-	fmt.Println("Q", query)
-	fmt.Println("Data", data)
 
 	return err
 }
