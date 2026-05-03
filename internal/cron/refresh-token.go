@@ -13,17 +13,25 @@ import (
 func RefreshTokenCleanup(db *sqlx.DB, userRepo repository.UserRepository, appLogger *log.Logger) {
 	s := gocron.NewScheduler(time.Local)
 
-	s.Every(1).Day().Do(func() {
-		err := userRepo.RemoveExpiredToken(context.Background(), nil, db)
+	_, err := s.Every(1).Day().At("03:00").Do(func() {
+		appLogger.Println("Starting expired refresh token cleanup...")
+
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+		defer cancel()
+
+		err := userRepo.RemoveExpiredToken(ctx, nil, db)
 		if err != nil {
-			appLogger.Printf("Error occurred while removing expired tokens: %v", err)
+			appLogger.Printf("ERROR: Failed to remove expired tokens: %v", err)
+			return
 		}
 
-		appLogger.Println("Refresh token cleanup executed at:", time.Now())
+		appLogger.Printf("SUCCESS: Expired refresh tokens cleaned up at: %s", time.Now().Format("15:04:05"))
 	})
 
-	s.StartAsync()
+	if err != nil {
+		appLogger.Fatalf("Failed to schedule cleanup job: %v", err)
+	}
 
-	// Prevent exit
-	select {}
+	s.StartAsync()
+	appLogger.Println("Token cleanup scheduler is active.")
 }
