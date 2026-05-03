@@ -13,4 +13,10 @@ func Start(db *sqlx.DB, logger *log.Logger) {
 	go func() {
 		RefreshTokenCleanup(db, userRepo, logger)
 	}()
+
+	// Networth
+	networthRepo := repository.NewNetworthRepository()
+	go func() {
+		NetworthCalculate(db, networthRepo, logger)
+	}()
 }
