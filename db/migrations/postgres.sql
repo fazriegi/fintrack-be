@@ -137,3 +137,5 @@ CREATE INDEX idx_transactions_user ON transactions(user_id);
 CREATE INDEX idx_net_worth_date ON net_worth_histories(recorded_date);
 CREATE INDEX idx_refresh_tokens_token ON refresh_tokens(token);
 CREATE INDEX idx_refresh_tokens_user ON refresh_tokens(user_id);
+
+ALTER TABLE net_worth_histories ADD CONSTRAINT unique_user_date UNIQUE (user_id, recorded_date);
