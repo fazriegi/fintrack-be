@@ -12,6 +12,7 @@ import (
 	"github.com/fazriegi/fintrack-be/pkg/constant"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
+	"github.com/shopspring/decimal"
 )
 
 type assetRepository struct{}
@@ -23,6 +24,8 @@ type AssetRepository interface {
 	Delete(ctx context.Context, id, userId uuid.UUID, db *sqlx.DB) error
 	Insert(ctx context.Context, data *domain.AssetDB, db *sqlx.DB) error
 	Update(ctx context.Context, data *domain.AssetDB, db *sqlx.DB) error
+	GetTickers(ctx context.Context, db *sqlx.DB) (*[]string, error)
+	UpdateStockPrice(ctx context.Context, db *sqlx.DB, ticker string, price decimal.Decimal) error
 }
 
 func NewAssetRepository() AssetRepository {
@@ -162,6 +165,32 @@ func (r *assetRepository) Insert(ctx context.Context, data *domain.AssetDB, db *
 func (r *assetRepository) Update(ctx context.Context, data *domain.AssetDB, db *sqlx.DB) error {
 	query := `UPDATE assets SET name = :name, category_id = :category_id, current_value = :current_value, details = :details, is_active = :is_active, updated_at = now() WHERE id = :id AND user_id = :user_id`
 	_, err := db.NamedExecContext(ctx, query, data)
+
+	return err
+}
+
+func (r *assetRepository) GetTickers(ctx context.Context, db *sqlx.DB) (*[]string, error) {
+	var tickers = make([]string, 0)
+	query := `
+		SELECT distinct assets.details->>'ticker_symbol' AS ticker_symbol
+		FROM assets 
+		JOIN asset_categories ac ON assets.user_id = ac.user_id AND assets.category_id = ac.id
+		WHERE ac.base_type = 'investment'
+			AND ac.name = 'Stock'
+			AND assets.is_active = true
+	`
+	err := db.SelectContext(ctx, &tickers, query)
+
+	return &tickers, err
+}
+
+func (r *assetRepository) UpdateStockPrice(ctx context.Context, db *sqlx.DB, ticker string, price decimal.Decimal) error {
+	query := `
+		UPDATE assets 
+		SET current_value = (details->>'quantity')::decimal * $1, updated_at = now() 
+		WHERE details->>'ticker_symbol' = $2
+	`
+	_, err := db.ExecContext(ctx, query, price, ticker)
 
 	return err
 }

@@ -19,4 +19,10 @@ func Start(db *sqlx.DB, logger *log.Logger) {
 	go func() {
 		NetworthCalculate(db, networthRepo, logger)
 	}()
+
+	// Stock
+	assetRepo := repository.NewAssetRepository()
+	go func() {
+		UpdateStockPrice(db, assetRepo, logger)
+	}()
 }
