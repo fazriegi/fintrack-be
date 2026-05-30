@@ -11,18 +11,16 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-type networthRepository struct{}
-
-type NetworthRepository interface {
-	Calculate(ctx context.Context, db *sqlx.DB) error
-	GetCurrent(ctx context.Context, userId uuid.UUID, db *sqlx.DB) (*domain.Networth, error)
+type networthRepository struct {
+	db *sqlx.DB
 }
 
-func NewNetworthRepository() NetworthRepository {
-	return &networthRepository{}
+func NewNetworthRepository(db *sqlx.DB) domain.NetworthRepository {
+	return &networthRepository{db: db}
 }
 
-func (r *networthRepository) Calculate(ctx context.Context, db *sqlx.DB) error {
+func (r *networthRepository) Calculate(ctx context.Context) error {
+	db := getQueryer(ctx, r.db)
 	query := `
 		WITH AssetSummary AS (
 			SELECT user_id, COALESCE(SUM(current_value), 0) AS total_assets
@@ -56,7 +54,8 @@ func (r *networthRepository) Calculate(ctx context.Context, db *sqlx.DB) error {
 	return err
 }
 
-func (r *networthRepository) GetCurrent(ctx context.Context, userId uuid.UUID, db *sqlx.DB) (*domain.Networth, error) {
+func (r *networthRepository) GetCurrent(ctx context.Context, userId uuid.UUID) (*domain.Networth, error) {
+	db := getQueryer(ctx, r.db)
 	var networth domain.Networth
 	query := `
 		WITH realtime_assets AS (

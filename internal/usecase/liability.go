@@ -8,17 +8,14 @@ import (
 	"net/http"
 
 	"github.com/fazriegi/fintrack-be/internal/domain"
-	"github.com/fazriegi/fintrack-be/internal/repository"
 	"github.com/fazriegi/fintrack-be/pkg"
 	"github.com/fazriegi/fintrack-be/pkg/constant"
 	"github.com/google/uuid"
-	"github.com/jmoiron/sqlx"
 )
 
 type liabilityUsecase struct {
-	db   *sqlx.DB
 	log  *log.Logger
-	repo repository.LiabilityRepository
+	repo domain.LiabilityRepository
 }
 
 type LiabilityUsecase interface {
@@ -30,14 +27,14 @@ type LiabilityUsecase interface {
 	Delete(ctx context.Context, id uuid.UUID) (resp pkg.Response)
 }
 
-func NewLiabilityUsecase(db *sqlx.DB, log *log.Logger, repo repository.LiabilityRepository) LiabilityUsecase {
-	return &liabilityUsecase{db, log, repo}
+func NewLiabilityUsecase(log *log.Logger, repo domain.LiabilityRepository) LiabilityUsecase {
+	return &liabilityUsecase{log, repo}
 }
 
 func (u *liabilityUsecase) ListCategory(ctx context.Context) (resp pkg.Response) {
 	userId := ctx.Value("user_id").(uuid.UUID)
 
-	categories, err := u.repo.ListCategory(ctx, userId, u.db)
+	categories, err := u.repo.ListCategory(ctx, userId)
 	if err != nil {
 		u.log.Printf("[ERROR] repo.ListCategory: %s", err.Error())
 		return pkg.NewResponse(http.StatusInternalServerError, constant.ErrServer, nil, nil)
@@ -69,7 +66,7 @@ func (u *liabilityUsecase) Create(ctx context.Context, req *domain.CreateLiabili
 		Details:          detailsDB,
 	}
 
-	err := u.repo.Insert(ctx, liabilityDB, u.db)
+	err := u.repo.Insert(ctx, liabilityDB)
 	if err != nil {
 		u.log.Printf("[ERROR] repo.Insert: %s", err.Error())
 		return pkg.NewResponse(http.StatusInternalServerError, constant.ErrServer, nil, nil)
@@ -82,7 +79,7 @@ func (u *liabilityUsecase) List(ctx context.Context, req *domain.ListLiabilityRe
 	userId := ctx.Value("user_id").(uuid.UUID)
 	req.UserId = userId
 
-	liabilities, total, err := u.repo.List(ctx, req, u.db)
+	liabilities, total, err := u.repo.List(ctx, req)
 	if err != nil {
 		u.log.Printf("[ERROR] repo.List: %s", err.Error())
 		return pkg.NewResponse(http.StatusInternalServerError, constant.ErrServer, nil, nil)
@@ -130,7 +127,7 @@ func (u *liabilityUsecase) List(ctx context.Context, req *domain.ListLiabilityRe
 func (u *liabilityUsecase) GetByID(ctx context.Context, id uuid.UUID) (resp pkg.Response) {
 	userId := ctx.Value("user_id").(uuid.UUID)
 
-	liability, err := u.repo.GetByID(ctx, id, userId, u.db)
+	liability, err := u.repo.GetByID(ctx, id, userId)
 	if err != nil {
 		if err.Error() != constant.ErrNotFound {
 			u.log.Printf("[ERROR] repo.GetByID: %s", err.Error())
@@ -194,7 +191,7 @@ func (u *liabilityUsecase) Update(ctx context.Context, req *domain.CreateLiabili
 		Details:          detailsDB,
 	}
 
-	err := u.repo.Update(ctx, liabilityDB, u.db)
+	err := u.repo.Update(ctx, liabilityDB)
 	if err != nil {
 		u.log.Printf("[ERROR] repo.Update: %s", err.Error())
 		return pkg.NewResponse(http.StatusInternalServerError, constant.ErrServer, nil, nil)
@@ -206,7 +203,7 @@ func (u *liabilityUsecase) Update(ctx context.Context, req *domain.CreateLiabili
 func (u *liabilityUsecase) Delete(ctx context.Context, id uuid.UUID) (resp pkg.Response) {
 	userId := ctx.Value("user_id").(uuid.UUID)
 
-	err := u.repo.Delete(ctx, id, userId, u.db)
+	err := u.repo.Delete(ctx, id, userId)
 	if err != nil {
 		u.log.Printf("[ERROR] repo.Delete: %s", err.Error())
 		return pkg.NewResponse(http.StatusInternalServerError, constant.ErrServer, nil, nil)

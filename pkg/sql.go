@@ -11,7 +11,11 @@ import (
 
 var validColumnRegex = regexp.MustCompile(`^[a-zA-Z0-9_]+$`)
 
-func SelectWithPagination(ctx context.Context, db *sqlx.DB, query string, args map[string]interface{}) (*sqlx.Rows, error) {
+type NamedQueryer interface {
+	NamedQueryContext(ctx context.Context, query string, arg interface{}) (*sqlx.Rows, error)
+}
+
+func SelectWithPagination(ctx context.Context, db NamedQueryer, query string, args map[string]interface{}) (*sqlx.Rows, error) {
 	if !strings.HasSuffix(query, " ") {
 		query += " "
 	}

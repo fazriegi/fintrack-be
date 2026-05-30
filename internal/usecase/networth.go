@@ -5,31 +5,30 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/fazriegi/fintrack-be/internal/repository"
+	"github.com/fazriegi/fintrack-be/internal/domain"
 	"github.com/fazriegi/fintrack-be/pkg"
 	"github.com/fazriegi/fintrack-be/pkg/constant"
 	"github.com/google/uuid"
-	"github.com/jmoiron/sqlx"
 )
 
 type networthUsecase struct {
-	db   *sqlx.DB
 	log  *log.Logger
-	repo repository.NetworthRepository
+	repo domain.NetworthRepository
 }
 
 type NetworthUsecase interface {
 	GetCurrent(ctx context.Context) (resp pkg.Response)
+	CalculateDailyNetworth(ctx context.Context) error
 }
 
-func NewNetworthUsecase(db *sqlx.DB, log *log.Logger, repo repository.NetworthRepository) NetworthUsecase {
-	return &networthUsecase{db, log, repo}
+func NewNetworthUsecase(log *log.Logger, repo domain.NetworthRepository) NetworthUsecase {
+	return &networthUsecase{log, repo}
 }
 
 func (u *networthUsecase) GetCurrent(ctx context.Context) (resp pkg.Response) {
 	userId := ctx.Value("user_id").(uuid.UUID)
 
-	networth, err := u.repo.GetCurrent(ctx, userId, u.db)
+	networth, err := u.repo.GetCurrent(ctx, userId)
 	if err != nil {
 		if err.Error() != constant.ErrNotFound {
 			u.log.Printf("[ERROR] repo.GetCurrent: %s", err.Error())
@@ -41,3 +40,8 @@ func (u *networthUsecase) GetCurrent(ctx context.Context) (resp pkg.Response) {
 
 	return pkg.NewResponse(http.StatusOK, "Success", networth, nil)
 }
+
+func (u *networthUsecase) CalculateDailyNetworth(ctx context.Context) error {
+	return u.repo.Calculate(ctx)
+}
+

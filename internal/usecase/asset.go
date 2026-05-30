@@ -6,19 +6,18 @@ import (
 	"log"
 	"math"
 	"net/http"
+	"sync"
 
 	"github.com/fazriegi/fintrack-be/internal/domain"
-	"github.com/fazriegi/fintrack-be/internal/repository"
 	"github.com/fazriegi/fintrack-be/pkg"
 	"github.com/fazriegi/fintrack-be/pkg/constant"
 	"github.com/google/uuid"
-	"github.com/jmoiron/sqlx"
 )
 
 type assetUsecase struct {
-	db   *sqlx.DB
-	log  *log.Logger
-	repo repository.AssetRepository
+	log           *log.Logger
+	repo          domain.AssetRepository
+	yahooProvider domain.YahooProvider
 }
 
 type AssetUsecase interface {
@@ -28,17 +27,18 @@ type AssetUsecase interface {
 	Delete(ctx context.Context, id uuid.UUID) (resp pkg.Response)
 	Create(ctx context.Context, req *domain.CreateAsset) (resp pkg.Response)
 	Update(ctx context.Context, req *domain.UpdateAsset) (resp pkg.Response)
+	UpdateStockPrices(ctx context.Context) error
 }
 
-func NewAssetUsecase(db *sqlx.DB, log *log.Logger, repo repository.AssetRepository) AssetUsecase {
-	return &assetUsecase{db, log, repo}
+func NewAssetUsecase(log *log.Logger, repo domain.AssetRepository, yahooProvider domain.YahooProvider) AssetUsecase {
+	return &assetUsecase{log, repo, yahooProvider}
 }
 
 func (u *assetUsecase) ListAsset(ctx context.Context, req *domain.ListAssetRequest) (resp pkg.Response) {
 	userId := ctx.Value("user_id").(uuid.UUID)
 	req.UserId = userId
 
-	assets, total, err := u.repo.ListAsset(ctx, req, u.db)
+	assets, total, err := u.repo.ListAsset(ctx, req)
 	if err != nil {
 		u.log.Printf("[ERROR] repo.ListAsset: %s", err.Error())
 		return pkg.NewResponse(http.StatusInternalServerError, constant.ErrServer, nil, nil)
@@ -87,7 +87,7 @@ func (u *assetUsecase) ListAsset(ctx context.Context, req *domain.ListAssetReque
 func (u *assetUsecase) ListAssetCategory(ctx context.Context) (resp pkg.Response) {
 	userId := ctx.Value("user_id").(uuid.UUID)
 
-	categories, err := u.repo.ListCategory(ctx, userId, u.db)
+	categories, err := u.repo.ListCategory(ctx, userId)
 	if err != nil {
 		u.log.Printf("[ERROR] repo.ListCategory: %s", err.Error())
 		return pkg.NewResponse(http.StatusInternalServerError, constant.ErrServer, nil, nil)
@@ -99,7 +99,7 @@ func (u *assetUsecase) ListAssetCategory(ctx context.Context) (resp pkg.Response
 func (u *assetUsecase) GetByID(ctx context.Context, id uuid.UUID) (resp pkg.Response) {
 	userId := ctx.Value("user_id").(uuid.UUID)
 
-	asset, err := u.repo.GetByID(ctx, id, userId, u.db)
+	asset, err := u.repo.GetByID(ctx, id, userId)
 	if err != nil {
 		if err.Error() != constant.ErrNotFound {
 			u.log.Printf("[ERROR] repo.GetByID: %s", err.Error())
@@ -142,7 +142,7 @@ func (u *assetUsecase) GetByID(ctx context.Context, id uuid.UUID) (resp pkg.Resp
 func (u *assetUsecase) Delete(ctx context.Context, id uuid.UUID) (resp pkg.Response) {
 	userId := ctx.Value("user_id").(uuid.UUID)
 
-	err := u.repo.Delete(ctx, id, userId, u.db)
+	err := u.repo.Delete(ctx, id, userId)
 	if err != nil {
 		u.log.Printf("[ERROR] repo.Delete: %s", err.Error())
 		return pkg.NewResponse(http.StatusInternalServerError, constant.ErrServer, nil, nil)
@@ -174,7 +174,7 @@ func (u *assetUsecase) Create(ctx context.Context, req *domain.CreateAsset) (res
 		IsActive:     *req.IsActive,
 	}
 
-	err := u.repo.Insert(ctx, assetDB, u.db)
+	err := u.repo.Insert(ctx, assetDB)
 	if err != nil {
 		u.log.Printf("[ERROR] repo.Insert: %s", err.Error())
 		return pkg.NewResponse(http.StatusInternalServerError, constant.ErrServer, nil, nil)
@@ -207,11 +207,53 @@ func (u *assetUsecase) Update(ctx context.Context, req *domain.UpdateAsset) (res
 		IsActive:     *req.IsActive,
 	}
 
-	err := u.repo.Update(ctx, assetDB, u.db)
+	err := u.repo.Update(ctx, assetDB)
 	if err != nil {
 		u.log.Printf("[ERROR] repo.Update: %s", err.Error())
 		return pkg.NewResponse(http.StatusInternalServerError, constant.ErrServer, nil, nil)
 	}
 
 	return pkg.NewResponse(http.StatusOK, "Success", nil, nil)
+}
+
+func (u *assetUsecase) UpdateStockPrices(ctx context.Context) error {
+	tickers, err := u.repo.GetTickers(ctx)
+	if err != nil {
+		return err
+	}
+
+	var wg sync.WaitGroup
+	errChan := make(chan error, len(*tickers))
+
+	for _, ticker := range *tickers {
+		wg.Add(1)
+		go func(t string) {
+			defer wg.Done()
+			price, err := u.yahooProvider.FetchPrice(ctx, t)
+			if err != nil {
+				u.log.Printf("[ERROR] Failed to fetch stock price for ticker %s: %v", t, err)
+				errChan <- err
+				return
+			}
+
+			err = u.repo.UpdateStockPrice(ctx, t, price)
+			if err != nil {
+				u.log.Printf("[ERROR] Failed to update stock price for ticker %s: %v", t, err)
+				errChan <- err
+				return
+			}
+		}(ticker)
+	}
+
+	wg.Wait()
+	close(errChan)
+
+	var lastErr error
+	for err := range errChan {
+		if err != nil {
+			lastErr = err
+		}
+	}
+
+	return lastErr
 }

@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"context"
 	"time"
 
 	"github.com/fazriegi/fintrack-be/pkg"
@@ -68,3 +69,13 @@ type GetLiabilityByIDResponse struct {
 	RemainingBalance decimal.Decimal `json:"remaining_balance"`
 	Details          any             `json:"details"`
 }
+
+type LiabilityRepository interface {
+	ListCategory(ctx context.Context, userId uuid.UUID) (*[]Category, error)
+	List(ctx context.Context, req *ListLiabilityRequest) (*[]Liability, int, error)
+	GetByID(ctx context.Context, id, userId uuid.UUID) (*Liability, error)
+	Delete(ctx context.Context, id, userId uuid.UUID) error
+	Insert(ctx context.Context, data *LiabilityDB) error
+	Update(ctx context.Context, data *LiabilityDB) error
+}
+

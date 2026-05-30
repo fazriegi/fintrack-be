@@ -7,19 +7,17 @@ import (
 	"time"
 
 	"github.com/fazriegi/fintrack-be/internal/domain"
-	"github.com/fazriegi/fintrack-be/internal/repository"
 	"github.com/fazriegi/fintrack-be/pkg"
 	"github.com/fazriegi/fintrack-be/pkg/constant"
 	"github.com/fazriegi/fintrack-be/pkg/password"
 	"github.com/fazriegi/fintrack-be/pkg/token"
 	"github.com/google/uuid"
-	"github.com/jmoiron/sqlx"
 )
 
 type userUsecase struct {
-	db   *sqlx.DB
 	log  *log.Logger
-	repo repository.UserRepository
+	repo domain.UserRepository
+	tx   domain.TransactionManager
 }
 
 type UserUsecase interface {
@@ -28,14 +26,15 @@ type UserUsecase interface {
 	RefreshToken(ctx context.Context, refreshToken, remoteAddr string) (resp pkg.Response)
 	Profile(ctx context.Context, accessToken string) (resp pkg.Response)
 	Logout(ctx context.Context, accessToken, refreshToken string) (resp pkg.Response)
+	CleanupExpiredTokens(ctx context.Context) error
 }
 
-func NewUserUsecase(db *sqlx.DB, log *log.Logger, repo repository.UserRepository) UserUsecase {
-	return &userUsecase{db, log, repo}
+func NewUserUsecase(log *log.Logger, repo domain.UserRepository, tx domain.TransactionManager) UserUsecase {
+	return &userUsecase{log, repo, tx}
 }
 
 func (uc *userUsecase) Register(ctx context.Context, req *domain.RegisterRequest) pkg.Response {
-	existingUser, err := uc.repo.GetByEmail(ctx, req.Email, uc.db)
+	existingUser, err := uc.repo.GetByEmail(ctx, req.Email)
 	if err != nil && err.Error() != constant.ErrUserNotFound {
 		uc.log.Printf("[ERROR] repo.GetByEmail: %s", err.Error())
 		return pkg.NewResponse(http.StatusInternalServerError, constant.ErrServer, nil, nil)
@@ -51,32 +50,28 @@ func (uc *userUsecase) Register(ctx context.Context, req *domain.RegisterRequest
 		return pkg.NewResponse(http.StatusInternalServerError, constant.ErrServer, nil, nil)
 	}
 
-	tx, err := uc.db.Beginx()
-	if err != nil {
-		uc.log.Printf("[ERROR] error start transaction: %s", err.Error())
-		return pkg.NewResponse(http.StatusInternalServerError, constant.ErrServer, nil, nil)
-	}
-	defer tx.Rollback()
-
 	user := &domain.User{
 		Email:    req.Email,
 		Password: hash,
 		FullName: req.FullName,
 	}
 
-	userId, err := uc.repo.Create(ctx, user, tx)
+	var userId uuid.UUID
+	err = uc.tx.WithTransaction(ctx, func(txCtx context.Context) error {
+		var err error
+		userId, err = uc.repo.Create(txCtx, user)
+		if err != nil {
+			return err
+		}
+
+		if err := uc.repo.SeedDefaultCategories(txCtx, userId); err != nil {
+			return err
+		}
+
+		return nil
+	})
 	if err != nil {
-		uc.log.Printf("[ERROR] repo.Create: %s", err.Error())
-		return pkg.NewResponse(http.StatusInternalServerError, constant.ErrServer, nil, nil)
-	}
-
-	if err := uc.repo.SeedDefaultCategories(ctx, tx, userId); err != nil {
-		uc.log.Printf("[ERROR] repo.SeedDefaultCategories: %s", err.Error())
-		return pkg.NewResponse(http.StatusInternalServerError, constant.ErrServer, nil, nil)
-	}
-
-	if err := tx.Commit(); err != nil {
-		uc.log.Printf("[ERROR] commit transaction: %s", err.Error())
+		uc.log.Printf("[ERROR] Register transaction failed: %s", err.Error())
 		return pkg.NewResponse(http.StatusInternalServerError, constant.ErrServer, nil, nil)
 	}
 
@@ -84,7 +79,7 @@ func (uc *userUsecase) Register(ctx context.Context, req *domain.RegisterRequest
 }
 
 func (uc *userUsecase) Login(ctx context.Context, req *domain.LoginRequest) (resp pkg.Response) {
-	user, err := uc.repo.GetByEmail(ctx, req.Email, uc.db)
+	user, err := uc.repo.GetByEmail(ctx, req.Email)
 	if err != nil {
 		uc.log.Printf("[ERROR] repo.GetByEmail: %s", err.Error())
 		return pkg.NewResponse(http.StatusUnauthorized, constant.ErrInvalidCreds, nil, nil)
@@ -106,26 +101,17 @@ func (uc *userUsecase) Login(ctx context.Context, req *domain.LoginRequest) (res
 		return pkg.NewResponse(http.StatusInternalServerError, constant.ErrServer, nil, nil)
 	}
 
-	tx, err := uc.db.Beginx()
+	err = uc.tx.WithTransaction(ctx, func(txCtx context.Context) error {
+		return uc.repo.InsertRefreshToken(txCtx, domain.RefreshToken{
+			UserID:     user.ID,
+			Token:      refreshToken,
+			ExpiresAt:  time.Now().Add(7 * 24 * time.Hour),
+			DeviceInfo: "",
+			IPAddress:  req.RemoteAddr,
+		})
+	})
 	if err != nil {
-		uc.log.Printf("[ERROR] error start transaction: %s", err.Error())
-		return pkg.NewResponse(http.StatusInternalServerError, constant.ErrServer, nil, nil)
-	}
-	defer tx.Rollback()
-
-	if err := uc.repo.InsertRefreshToken(ctx, domain.RefreshToken{
-		UserID:     user.ID,
-		Token:      refreshToken,
-		ExpiresAt:  time.Now().Add(7 * 24 * time.Hour),
-		DeviceInfo: "",
-		IPAddress:  req.RemoteAddr,
-	}, tx); err != nil {
-		uc.log.Printf("[ERROR] repo.InsertRefreshToken: %s", err.Error())
-		return pkg.NewResponse(http.StatusInternalServerError, constant.ErrServer, nil, nil)
-	}
-
-	if err := tx.Commit(); err != nil {
-		uc.log.Printf("[ERROR] commit transaction: %s", err.Error())
+		uc.log.Printf("[ERROR] InsertRefreshToken transaction failed: %s", err.Error())
 		return pkg.NewResponse(http.StatusInternalServerError, constant.ErrServer, nil, nil)
 	}
 
@@ -149,7 +135,7 @@ func (uc *userUsecase) RefreshToken(ctx context.Context, refreshToken, remoteAdd
 		return pkg.NewResponse(http.StatusUnauthorized, constant.ErrInvalidToken, nil, nil)
 	}
 
-	tokenExp, err := uc.repo.CheckRefreshToken(ctx, parsedUserID, refreshToken, uc.db)
+	tokenExp, err := uc.repo.CheckRefreshToken(ctx, parsedUserID, refreshToken)
 	if err != nil {
 		if err.Error() != constant.ErrNotFound {
 			uc.log.Printf("[ERROR] repo.CheckRefreshToken: %s", err.Error())
@@ -160,37 +146,31 @@ func (uc *userUsecase) RefreshToken(ctx context.Context, refreshToken, remoteAdd
 
 	threeHour := time.Now().Add(3 * time.Hour)
 	if threeHour.After(tokenExp) {
-		tx, err := uc.db.Beginx()
+		err = uc.tx.WithTransaction(ctx, func(txCtx context.Context) error {
+			if err := uc.repo.RevokeRefreshToken(txCtx, parsedUserID, refreshToken); err != nil {
+				return err
+			}
+
+			var err error
+			refreshToken, err = token.GenerateRefreshToken(parsedUserID.String())
+			if err != nil {
+				return err
+			}
+
+			if err := uc.repo.InsertRefreshToken(txCtx, domain.RefreshToken{
+				UserID:     parsedUserID,
+				Token:      refreshToken,
+				ExpiresAt:  time.Now().Add(7 * 24 * time.Hour),
+				DeviceInfo: "",
+				IPAddress:  remoteAddr,
+			}); err != nil {
+				return err
+			}
+
+			return nil
+		})
 		if err != nil {
-			uc.log.Printf("[ERROR] error start transaction: %s", err.Error())
-			return pkg.NewResponse(http.StatusUnauthorized, constant.ErrInvalidToken, nil, nil)
-		}
-		defer tx.Rollback()
-
-		if err := uc.repo.RevokeRefreshToken(ctx, parsedUserID, refreshToken, tx); err != nil {
-			uc.log.Printf("[ERROR] repo.RevokeRefreshToken: %s", err.Error())
-			return pkg.NewResponse(http.StatusUnauthorized, constant.ErrInvalidToken, nil, nil)
-		}
-
-		refreshToken, err = token.GenerateRefreshToken(parsedUserID.String())
-		if err != nil {
-			uc.log.Printf("[ERROR] token.GenerateRefreshToken: %s", err.Error())
-			return pkg.NewResponse(http.StatusUnauthorized, constant.ErrInvalidToken, nil, nil)
-		}
-
-		if err := uc.repo.InsertRefreshToken(ctx, domain.RefreshToken{
-			UserID:     parsedUserID,
-			Token:      refreshToken,
-			ExpiresAt:  time.Now().Add(7 * 24 * time.Hour),
-			DeviceInfo: "",
-			IPAddress:  remoteAddr,
-		}, tx); err != nil {
-			uc.log.Printf("[ERROR] repo.InsertRefreshToken: %s", err.Error())
-			return pkg.NewResponse(http.StatusUnauthorized, constant.ErrInvalidToken, nil, nil)
-		}
-
-		if err := tx.Commit(); err != nil {
-			uc.log.Printf("[ERROR] commit transaction: %s", err.Error())
+			uc.log.Printf("[ERROR] RefreshToken transaction failed: %s", err.Error())
 			return pkg.NewResponse(http.StatusUnauthorized, constant.ErrInvalidToken, nil, nil)
 		}
 	}
@@ -210,7 +190,7 @@ func (uc *userUsecase) RefreshToken(ctx context.Context, refreshToken, remoteAdd
 func (uc *userUsecase) Profile(ctx context.Context, accessToken string) (resp pkg.Response) {
 	userId := ctx.Value("user_id").(uuid.UUID)
 
-	user, err := uc.repo.GetByID(ctx, userId, uc.db)
+	user, err := uc.repo.GetByID(ctx, userId)
 	if err != nil {
 		if err.Error() != constant.ErrUserNotFound {
 			uc.log.Printf("[ERROR] repo.GetByID: %s", err.Error())
@@ -234,19 +214,17 @@ func (uc *userUsecase) Logout(ctx context.Context, accessToken, refreshToken str
 		uc.log.Printf("[ERROR] uuid.Parse - invalid UUID format in claims: %s", err.Error())
 	}
 
-	tx, err := uc.db.Beginx()
-	if err != nil {
-		uc.log.Printf("[ERROR] error start transaction: %s", err.Error())
-	}
-	defer tx.Rollback()
-
-	if err := uc.repo.RevokeRefreshToken(ctx, parsedUserID, refreshToken, tx); err != nil {
-		uc.log.Printf("[ERROR] repo.RevokeRefreshToken: %s", err.Error())
-	}
-
-	if err := tx.Commit(); err != nil {
-		uc.log.Printf("[ERROR] commit transaction: %s", err.Error())
-	}
+	_ = uc.tx.WithTransaction(ctx, func(txCtx context.Context) error {
+		if err := uc.repo.RevokeRefreshToken(txCtx, parsedUserID, refreshToken); err != nil {
+			uc.log.Printf("[ERROR] repo.RevokeRefreshToken: %s", err.Error())
+			return err
+		}
+		return nil
+	})
 
 	return pkg.NewResponse(http.StatusOK, "Success", nil, nil)
+}
+
+func (uc *userUsecase) CleanupExpiredTokens(ctx context.Context) error {
+	return uc.repo.RemoveExpiredToken(ctx, nil)
 }

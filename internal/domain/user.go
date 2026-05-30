@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"context"
 	"time"
 
 	"github.com/google/uuid"
@@ -33,3 +34,15 @@ type RefreshToken struct {
 	DeviceInfo string
 	IPAddress  string
 }
+
+type UserRepository interface {
+	Create(ctx context.Context, user *User) (uuid.UUID, error)
+	GetByEmail(ctx context.Context, email string) (*User, error)
+	GetByID(ctx context.Context, userId uuid.UUID) (*User, error)
+	CheckRefreshToken(ctx context.Context, userId uuid.UUID, refreshToken string) (exp time.Time, err error)
+	InsertRefreshToken(ctx context.Context, data RefreshToken) error
+	SeedDefaultCategories(ctx context.Context, userID uuid.UUID) error
+	RevokeRefreshToken(ctx context.Context, userID uuid.UUID, refreshToken string) error
+	RemoveExpiredToken(ctx context.Context, userID *uuid.UUID) error
+}
+

@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/fazriegi/fintrack-be/internal/cron"
+	"github.com/fazriegi/fintrack-be/internal/delivery/cron"
 	"github.com/fazriegi/fintrack-be/internal/delivery/http/handler"
 	"github.com/fazriegi/fintrack-be/pkg/database"
 	"github.com/fazriegi/fintrack-be/pkg/logger"

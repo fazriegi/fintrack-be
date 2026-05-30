@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"context"
 	"time"
 
 	"github.com/google/uuid"
@@ -16,3 +17,9 @@ type Networth struct {
 	RecordedDate     time.Time       `db:"recorded_date" json:"recorded_date"`
 	GrowthPercentage decimal.Decimal `db:"growth_percentage" json:"growth_percentage"`
 }
+
+type NetworthRepository interface {
+	Calculate(ctx context.Context) error
+	GetCurrent(ctx context.Context, userId uuid.UUID) (*Networth, error)
+}
+

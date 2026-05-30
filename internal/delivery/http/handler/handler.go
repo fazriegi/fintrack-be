@@ -6,6 +6,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/fazriegi/fintrack-be/internal/delivery/http/middleware"
+	"github.com/fazriegi/fintrack-be/internal/infrastructure/yahoo"
 	"github.com/fazriegi/fintrack-be/internal/repository"
 	"github.com/fazriegi/fintrack-be/internal/usecase"
 	"github.com/jmoiron/sqlx"
@@ -14,21 +16,24 @@ import (
 )
 
 func New(db *sqlx.DB, logger *log.Logger) http.Handler {
+	txManager := repository.NewTransactionManager(db)
+
 	// USER
-	userRepo := repository.NewUserRepository()
-	authUC := usecase.NewUserUsecase(db, logger, userRepo)
+	userRepo := repository.NewUserRepository(db)
+	authUC := usecase.NewUserUsecase(logger, userRepo, txManager)
 
 	// ASSET
-	assetRepo := repository.NewAssetRepository()
-	assetUC := usecase.NewAssetUsecase(db, logger, assetRepo)
+	yahooProvider := yahoo.NewYahooProvider(os.Getenv("RAPID_API_KEY"))
+	assetRepo := repository.NewAssetRepository(db)
+	assetUC := usecase.NewAssetUsecase(logger, assetRepo, yahooProvider)
 
 	// LIABILITY
-	liabilityRepo := repository.NewLiabilityRepository()
-	liabilityUC := usecase.NewLiabilityUsecase(db, logger, liabilityRepo)
+	liabilityRepo := repository.NewLiabilityRepository(db)
+	liabilityUC := usecase.NewLiabilityUsecase(logger, liabilityRepo)
 
 	// NETWORTH
-	networthRepo := repository.NewNetworthRepository()
-	networthUC := usecase.NewNetworthUsecase(db, logger, networthRepo)
+	networthRepo := repository.NewNetworthRepository(db)
+	networthUC := usecase.NewNetworthUsecase(logger, networthRepo)
 
 	mux := http.NewServeMux()
 
@@ -49,5 +54,6 @@ func New(db *sqlx.DB, logger *log.Logger) http.Handler {
 		AllowCredentials: true,
 	})
 
-	return c.Handler(mux)
+	recovery := middleware.Recovery(logger)
+	return recovery(c.Handler(mux))
 }

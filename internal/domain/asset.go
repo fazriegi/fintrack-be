@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"context"
 	"time"
 
 	"github.com/fazriegi/fintrack-be/pkg"
@@ -84,3 +85,15 @@ type UpdateAsset struct {
 	IsActive     *bool            `json:"is_active" validate:"required"`
 	CategoryType string           `json:"category_type" validate:"required"`
 }
+
+type AssetRepository interface {
+	ListAsset(ctx context.Context, req *ListAssetRequest) (*[]Asset, int, error)
+	ListCategory(ctx context.Context, userId uuid.UUID) (*[]Category, error)
+	GetByID(ctx context.Context, id, userId uuid.UUID) (*Asset, error)
+	Delete(ctx context.Context, id, userId uuid.UUID) error
+	Insert(ctx context.Context, data *AssetDB) error
+	Update(ctx context.Context, data *AssetDB) error
+	GetTickers(ctx context.Context) (*[]string, error)
+	UpdateStockPrice(ctx context.Context, ticker string, price decimal.Decimal) error
+}
+

@@ -15,24 +15,16 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-type assetRepository struct{}
-
-type AssetRepository interface {
-	ListAsset(ctx context.Context, req *domain.ListAssetRequest, db *sqlx.DB) (*[]domain.Asset, int, error)
-	ListCategory(ctx context.Context, userId uuid.UUID, db *sqlx.DB) (*[]domain.Category, error)
-	GetByID(ctx context.Context, id, userId uuid.UUID, db *sqlx.DB) (*domain.Asset, error)
-	Delete(ctx context.Context, id, userId uuid.UUID, db *sqlx.DB) error
-	Insert(ctx context.Context, data *domain.AssetDB, db *sqlx.DB) error
-	Update(ctx context.Context, data *domain.AssetDB, db *sqlx.DB) error
-	GetTickers(ctx context.Context, db *sqlx.DB) (*[]string, error)
-	UpdateStockPrice(ctx context.Context, db *sqlx.DB, ticker string, price decimal.Decimal) error
+type assetRepository struct {
+	db *sqlx.DB
 }
 
-func NewAssetRepository() AssetRepository {
-	return &assetRepository{}
+func NewAssetRepository(db *sqlx.DB) domain.AssetRepository {
+	return &assetRepository{db: db}
 }
 
-func (r *assetRepository) ListAsset(ctx context.Context, req *domain.ListAssetRequest, db *sqlx.DB) (*[]domain.Asset, int, error) {
+func (r *assetRepository) ListAsset(ctx context.Context, req *domain.ListAssetRequest) (*[]domain.Asset, int, error) {
+	db := getQueryer(ctx, r.db)
 	var assets = make([]domain.Asset, 0)
 	var total int
 	var defaultSort = "created_at desc"
@@ -133,7 +125,8 @@ func (r *assetRepository) ListAsset(ctx context.Context, req *domain.ListAssetRe
 	return &assets, total, nil
 }
 
-func (r *assetRepository) ListCategory(ctx context.Context, userId uuid.UUID, db *sqlx.DB) (*[]domain.Category, error) {
+func (r *assetRepository) ListCategory(ctx context.Context, userId uuid.UUID) (*[]domain.Category, error) {
+	db := getQueryer(ctx, r.db)
 	var categories = make([]domain.Category, 0)
 	query := `SELECT id, name, base_type FROM asset_categories WHERE user_id = $1 ORDER BY name ASC`
 	err := db.SelectContext(ctx, &categories, query, userId)
@@ -141,7 +134,8 @@ func (r *assetRepository) ListCategory(ctx context.Context, userId uuid.UUID, db
 	return &categories, err
 }
 
-func (r *assetRepository) GetByID(ctx context.Context, id, userId uuid.UUID, db *sqlx.DB) (*domain.Asset, error) {
+func (r *assetRepository) GetByID(ctx context.Context, id, userId uuid.UUID) (*domain.Asset, error) {
+	db := getQueryer(ctx, r.db)
 	var asset domain.Asset
 	query := `
 		SELECT assets.id, assets.user_id, assets.category_id, assets.name, assets.current_value, assets.details, assets.is_active, ac."name" as category, 
@@ -157,28 +151,32 @@ func (r *assetRepository) GetByID(ctx context.Context, id, userId uuid.UUID, db 
 	return &asset, err
 }
 
-func (r *assetRepository) Delete(ctx context.Context, id, userId uuid.UUID, db *sqlx.DB) error {
+func (r *assetRepository) Delete(ctx context.Context, id, userId uuid.UUID) error {
+	db := getQueryer(ctx, r.db)
 	query := `DELETE FROM assets WHERE id = $1 AND user_id = $2`
 	_, err := db.ExecContext(ctx, query, id, userId)
 
 	return err
 }
 
-func (r *assetRepository) Insert(ctx context.Context, data *domain.AssetDB, db *sqlx.DB) error {
+func (r *assetRepository) Insert(ctx context.Context, data *domain.AssetDB) error {
+	db := getQueryer(ctx, r.db)
 	query := `INSERT INTO assets (user_id, category_id, name, current_value, details, is_active) VALUES (:user_id, :category_id, :name, :current_value, :details, :is_active)`
 	_, err := db.NamedExecContext(ctx, query, data)
 
 	return err
 }
 
-func (r *assetRepository) Update(ctx context.Context, data *domain.AssetDB, db *sqlx.DB) error {
+func (r *assetRepository) Update(ctx context.Context, data *domain.AssetDB) error {
+	db := getQueryer(ctx, r.db)
 	query := `UPDATE assets SET name = :name, category_id = :category_id, current_value = :current_value, details = :details, is_active = :is_active, updated_at = now() WHERE id = :id AND user_id = :user_id`
 	_, err := db.NamedExecContext(ctx, query, data)
 
 	return err
 }
 
-func (r *assetRepository) GetTickers(ctx context.Context, db *sqlx.DB) (*[]string, error) {
+func (r *assetRepository) GetTickers(ctx context.Context) (*[]string, error) {
+	db := getQueryer(ctx, r.db)
 	var tickers = make([]string, 0)
 	query := `
 		SELECT distinct assets.details->>'ticker_symbol' AS ticker_symbol
@@ -193,7 +191,8 @@ func (r *assetRepository) GetTickers(ctx context.Context, db *sqlx.DB) (*[]strin
 	return &tickers, err
 }
 
-func (r *assetRepository) UpdateStockPrice(ctx context.Context, db *sqlx.DB, ticker string, price decimal.Decimal) error {
+func (r *assetRepository) UpdateStockPrice(ctx context.Context, ticker string, price decimal.Decimal) error {
+	db := getQueryer(ctx, r.db)
 	query := `
 		UPDATE assets 
 		SET current_value = (details->>'quantity')::decimal * $1, updated_at = now() 

@@ -14,22 +14,16 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-type liabilityRepository struct{}
-
-type LiabilityRepository interface {
-	ListCategory(ctx context.Context, userId uuid.UUID, db *sqlx.DB) (*[]domain.Category, error)
-	List(ctx context.Context, req *domain.ListLiabilityRequest, db *sqlx.DB) (*[]domain.Liability, int, error)
-	GetByID(ctx context.Context, id, userId uuid.UUID, db *sqlx.DB) (*domain.Liability, error)
-	Delete(ctx context.Context, id, userId uuid.UUID, db *sqlx.DB) error
-	Insert(ctx context.Context, data *domain.LiabilityDB, db *sqlx.DB) error
-	Update(ctx context.Context, data *domain.LiabilityDB, db *sqlx.DB) error
+type liabilityRepository struct {
+	db *sqlx.DB
 }
 
-func NewLiabilityRepository() LiabilityRepository {
-	return &liabilityRepository{}
+func NewLiabilityRepository(db *sqlx.DB) domain.LiabilityRepository {
+	return &liabilityRepository{db: db}
 }
 
-func (r *liabilityRepository) ListCategory(ctx context.Context, userId uuid.UUID, db *sqlx.DB) (*[]domain.Category, error) {
+func (r *liabilityRepository) ListCategory(ctx context.Context, userId uuid.UUID) (*[]domain.Category, error) {
+	db := getQueryer(ctx, r.db)
 	var categories = make([]domain.Category, 0)
 	query := `SELECT id, name, base_type FROM liability_categories WHERE user_id = $1 ORDER BY name ASC`
 	err := db.SelectContext(ctx, &categories, query, userId)
@@ -37,7 +31,8 @@ func (r *liabilityRepository) ListCategory(ctx context.Context, userId uuid.UUID
 	return &categories, err
 }
 
-func (r *liabilityRepository) List(ctx context.Context, req *domain.ListLiabilityRequest, db *sqlx.DB) (*[]domain.Liability, int, error) {
+func (r *liabilityRepository) List(ctx context.Context, req *domain.ListLiabilityRequest) (*[]domain.Liability, int, error) {
+	db := getQueryer(ctx, r.db)
 	var liabilities = make([]domain.Liability, 0)
 	var total int
 	var defaultSort = "created_at desc"
@@ -132,28 +127,32 @@ func (r *liabilityRepository) List(ctx context.Context, req *domain.ListLiabilit
 	return &liabilities, total, nil
 }
 
-func (r *liabilityRepository) Delete(ctx context.Context, id, userId uuid.UUID, db *sqlx.DB) error {
+func (r *liabilityRepository) Delete(ctx context.Context, id, userId uuid.UUID) error {
+	db := getQueryer(ctx, r.db)
 	query := `DELETE FROM liabilities WHERE id = $1 AND user_id = $2`
 	_, err := db.ExecContext(ctx, query, id, userId)
 
 	return err
 }
 
-func (r *liabilityRepository) Insert(ctx context.Context, data *domain.LiabilityDB, db *sqlx.DB) error {
+func (r *liabilityRepository) Insert(ctx context.Context, data *domain.LiabilityDB) error {
+	db := getQueryer(ctx, r.db)
 	query := `INSERT INTO liabilities (user_id, category_id, name, principal_amount, remaining_balance, details) VALUES (:user_id, :category_id, :name, :principal_amount, :remaining_balance, :details)`
 	_, err := db.NamedExecContext(ctx, query, data)
 
 	return err
 }
 
-func (r *liabilityRepository) Update(ctx context.Context, data *domain.LiabilityDB, db *sqlx.DB) error {
+func (r *liabilityRepository) Update(ctx context.Context, data *domain.LiabilityDB) error {
+	db := getQueryer(ctx, r.db)
 	query := `UPDATE liabilities SET name = :name, category_id = :category_id, principal_amount = :principal_amount, remaining_balance = :remaining_balance, details = :details, updated_at = now() WHERE id = :id AND user_id = :user_id`
 	_, err := db.NamedExecContext(ctx, query, data)
 
 	return err
 }
 
-func (r *liabilityRepository) GetByID(ctx context.Context, id, userId uuid.UUID, db *sqlx.DB) (*domain.Liability, error) {
+func (r *liabilityRepository) GetByID(ctx context.Context, id, userId uuid.UUID) (*domain.Liability, error) {
+	db := getQueryer(ctx, r.db)
 	var liability domain.Liability
 	query := `
 		SELECT liabilities.id, liabilities.user_id, liabilities.category_id, liabilities.name, 
