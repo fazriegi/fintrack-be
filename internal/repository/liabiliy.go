@@ -52,6 +52,14 @@ func (r *liabilityRepository) List(ctx context.Context, req *domain.ListLiabilit
 		query += ` AND lc.name ILIKE :category`
 	}
 
+	if req.IsActive != nil {
+		if *req.IsActive {
+			query += ` AND liabilities.remaining_balance > 0`
+		} else {
+			query += ` AND liabilities.remaining_balance = 0`
+		}
+	}
+
 	if req.Sort == nil {
 		req.Sort = &defaultSort
 	}

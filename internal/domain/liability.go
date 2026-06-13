@@ -50,6 +50,7 @@ type ListLiabilityRequest struct {
 	UserId   uuid.UUID
 	Name     string `query:"name"`
 	Category string `query:"category"`
+	IsActive *bool  `query:"is_active"`
 }
 
 type ListLiabilityResponse struct {
