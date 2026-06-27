@@ -108,7 +108,7 @@ func (r *transactionRepository) List(ctx context.Context, req *domain.ListTransa
 	db := getQueryer(ctx, r.db)
 	var transactions = make([]domain.Transaction, 0)
 	var total int
-	var defaultSort = "transactions.transaction_date desc, transactions.created_at desc"
+	var defaultSort = "transaction_date desc, created_at desc"
 
 	query := `
 		SELECT 
