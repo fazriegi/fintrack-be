@@ -305,6 +305,9 @@ func (u *transactionUsecase) Delete(ctx context.Context, id uuid.UUID) (resp pkg
 	err := u.txManager.WithTransaction(ctx, func(txCtx context.Context) error {
 		oldTx, err := u.repo.GetByID(txCtx, id, userID)
 		if err != nil {
+			if err.Error() == constant.ErrNotFound {
+				return nil
+			}
 			return err
 		}
 
