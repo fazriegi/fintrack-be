@@ -14,6 +14,12 @@ func UpdateStockPrice(assetUC usecase.AssetUsecase, appLogger *log.Logger) {
 
 	_, err := s.Every(1).Day().At("17:00").Do(func() {
 		safeExecute(appLogger, "UpdateStockPrice", func() {
+			today := time.Now().Weekday()
+			if today == time.Saturday || today == time.Sunday {
+				appLogger.Println("Skipping scheduled stock price update: It's the weekend.")
+				return
+			}
+
 			appLogger.Println("Starting scheduled stock price update...")
 
 			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
